@@ -42,10 +42,10 @@ https://github.com/immortalwrt/padavan
  - 5G：机器名_5G_mac地址最后四位，如K2P_5G_9981
 
 wifi密码
- - 1234567890
+ - haierdianqi123
 
 管理地址
- - 192.168.2.1
+ - 10.10.10.10
 
 管理账号密码
  - admin
