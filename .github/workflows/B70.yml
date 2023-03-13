@@ -1,5 +1,5 @@
 #修改TNAME: NEWIFI3 中的NEWIFI3为你需要编译的型号，注意名称要与configs/templates/目录下的名字相同
-name: 云编译-Padavan-KVR-HC5861
+name: 云编译-Padavan-KVR-B70
 
 on: 
   release:
@@ -40,7 +40,7 @@ jobs:
         mkdir -p /opt/images/
     - name: Build Firmware
       env:
-        TNAME: HC5861
+        TNAME: B70
         KERNEL: 3.4
       run: |
         cd /opt/rt-n56u/trunk
@@ -96,5 +96,5 @@ jobs:
       uses: actions/upload-artifact@master
       if: always()
       with:
-        name: Padavan-KVR-HC5861
+        name: Padavan-KVR-B70
         path: /opt/images
