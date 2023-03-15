@@ -1,4 +1,4 @@
-SRC_NAME=libtirpc-1.3.3
+SRC_NAME=libtirpc-1.0.X
 
 all: config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
@@ -12,14 +12,13 @@ config_test:
 
 configure:
 	( cd $(SRC_NAME) ; \
-	#autoreconf -f ; \
 	sh autogen.sh ; \
 	./configure \
 		--prefix=$(STAGEDIR) \
 		--enable-shared \
 		--disable-static \
 		--disable-gssapi \
-		$(if $(CONFIG_IPV6),--enable-ipv6,--disable-ipv6) \
+		--disable-ipv6 \
 		--host=$(HOST_TARGET) \
 		--build=$(HOST_BUILD) ; \
 	)

@@ -22,36 +22,6 @@ struct asn1_oid asn1_sha256_oid = {
 };
 
 
-static int asn1_valid_der_boolean(struct asn1_hdr *hdr)
-{
-	/* Enforce DER requirements for a single way of encoding a BOOLEAN */
-	if (hdr->length != 1) {
-		wpa_printf(MSG_DEBUG, "ASN.1: Unexpected BOOLEAN length (%u)",
-			   hdr->length);
-		return 0;
-	}
-
-	if (hdr->payload[0] != 0 && hdr->payload[0] != 0xff) {
-		wpa_printf(MSG_DEBUG,
-			   "ASN.1: Invalid BOOLEAN value 0x%x (DER requires 0 or 0xff)",
-			   hdr->payload[0]);
-		return 0;
-	}
-
-	return 1;
-}
-
-
-static int asn1_valid_der(struct asn1_hdr *hdr)
-{
-	if (hdr->class != ASN1_CLASS_UNIVERSAL)
-		return 1;
-	if (hdr->tag == ASN1_TAG_BOOLEAN && !asn1_valid_der_boolean(hdr))
-		return 0;
-	return 1;
-}
-
-
 int asn1_get_next(const u8 *buf, size_t len, struct asn1_hdr *hdr)
 {
 	const u8 *pos, *end;
@@ -61,10 +31,6 @@ int asn1_get_next(const u8 *buf, size_t len, struct asn1_hdr *hdr)
 	pos = buf;
 	end = buf + len;
 
-	if (pos >= end) {
-		wpa_printf(MSG_DEBUG, "ASN.1: No room for Identifier");
-		return -1;
-	}
 	hdr->identifier = *pos++;
 	hdr->class = hdr->identifier >> 6;
 	hdr->constructed = !!(hdr->identifier & (1 << 5));
@@ -85,10 +51,6 @@ int asn1_get_next(const u8 *buf, size_t len, struct asn1_hdr *hdr)
 	} else
 		hdr->tag = hdr->identifier & 0x1f;
 
-	if (pos >= end) {
-		wpa_printf(MSG_DEBUG, "ASN.1: No room for Length");
-		return -1;
-	}
 	tmp = *pos++;
 	if (tmp & 0x80) {
 		if (tmp == 0xff) {
@@ -121,8 +83,7 @@ int asn1_get_next(const u8 *buf, size_t len, struct asn1_hdr *hdr)
 	}
 
 	hdr->payload = pos;
-
-	return asn1_valid_der(hdr) ? 0 : -1;
+	return 0;
 }
 
 

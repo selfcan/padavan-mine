@@ -4,7 +4,7 @@ mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 [ -d /proc/bus/usb ] && mount -t usbfs usbfs /proc/bus/usb
 
-size_tmp="100M"
+size_tmp="24M"
 size_var="4M"
 size_etc="6M"
 
@@ -63,10 +63,6 @@ if [ -f /etc_ro/openssl.cnf ]; then
 	cp -f /etc_ro/openssl.cnf /etc/ssl
 fi
 
-if [ -f /etc_ro/ca-certificates.crt ]; then
-	ln -sf /etc_ro/ca-certificates.crt /etc/ssl/cert.pem
-fi
-
 # create symlinks
 ln -sf /home/root /home/admin
 ln -sf /proc/mounts /etc/mtab
@@ -96,9 +92,6 @@ if [ -f /usr/bin/htop ]; then
 	mkdir -p /home/root/.config/htop
 	echo "color_scheme=6" > /home/root/.config/htop/htoprc
 fi
-
-# radio2 kick station rssi low
-/sbin/radio2_kicksta &
 
 # perform start script
 if [ -x /etc/storage/start_script.sh ] ; then

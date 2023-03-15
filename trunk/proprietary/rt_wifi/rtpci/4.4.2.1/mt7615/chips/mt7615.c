@@ -3970,5 +3970,3 @@ INT Mt7615AsicArchOpsInit(RTMP_ADAPTER *pAd)
 	return TRUE;
 }
 #endif
-
-

@@ -1,13 +1,12 @@
-SRC_NAME=util-linux-2.38
-SRC_URL=https://www.kernel.org/pub/linux/utils/util-linux/v2.38/util-linux-2.38.tar.xz
+SRC_NAME=util-linux-2.33.1
+SRC_URL=https://www.kernel.org/pub/linux/utils/util-linux/v2.33/util-linux-2.33.1.tar.xz
 
 THISDIR = $(shell pwd)
 
 CFLAGS += -ffunction-sections -fdata-sections
 LDFLAGS += -Wl,--gc-sections
 
-#all: download_test extract_test config_test
-all: config_test
+all: download_test extract_test config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME) && \
 	$(MAKE) -C $(SRC_NAME) install DESTDIR=""
 
@@ -31,7 +30,6 @@ config_test:
 
 configure:
 	( cd $(SRC_NAME) ; \
-	./autogen.sh ; \
 	PKG_CONFIG_PATH=$(STAGEDIR)/lib/pkgconfig \
 	scanf_cv_type_modifier=no \
 	./configure \

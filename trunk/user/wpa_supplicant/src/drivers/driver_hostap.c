@@ -231,11 +231,7 @@ static int hostap_init_sockets(struct hostap_driver_data *drv, u8 *own_addr)
 	}
 
         memset(&ifr, 0, sizeof(ifr));
-	if (os_snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%sap",
-			drv->iface) >= (int) sizeof(ifr.ifr_name)) {
-		wpa_printf(MSG_ERROR, "hostap: AP interface name truncated");
-		return -1;
-	}
+        snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%sap", drv->iface);
         if (ioctl(drv->sock, SIOCGIFINDEX, &ifr) != 0) {
 		wpa_printf(MSG_ERROR, "ioctl(SIOCGIFINDEX): %s",
 			   strerror(errno));
@@ -352,10 +348,7 @@ static int hostap_set_iface_flags(void *priv, int dev_up)
 	struct ifreq ifr;
 	char ifname[IFNAMSIZ];
 
-	if (os_snprintf(ifname, IFNAMSIZ, "%sap", drv->iface) >= IFNAMSIZ) {
-		wpa_printf(MSG_ERROR, "hostap: AP interface name truncated");
-		return -1;
-	}
+	os_snprintf(ifname, IFNAMSIZ, "%sap", drv->iface);
 	if (linux_set_iface_flags(drv->ioctl_sock, ifname, dev_up) < 0)
 		return -1;
 
@@ -1028,7 +1021,7 @@ static void hostap_driver_deinit(void *priv)
 
 
 static int hostap_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
-			     u16 reason)
+			     int reason)
 {
 	struct hostap_driver_data *drv = priv;
 	struct ieee80211_mgmt mgmt;
@@ -1076,7 +1069,7 @@ static int hostap_set_freq(void *priv, struct hostapd_freq_params *freq)
 
 
 static int hostap_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
-			       u16 reason)
+			       int reason)
 {
 	struct hostap_driver_data *drv = priv;
 	struct ieee80211_mgmt mgmt;
@@ -1131,7 +1124,6 @@ static struct hostapd_hw_modes * hostap_get_hw_feature_data(void *priv,
 	for (i = 0; i < 14; i++) {
 		mode->channels[i].chan = i + 1;
 		mode->channels[i].freq = chan2freq[i];
-		mode->channels[i].allowed_bw = HOSTAPD_CHAN_WIDTH_20;
 		/* TODO: Get allowed channel list from the driver */
 		if (i >= 11)
 			mode->channels[i].flag = HOSTAPD_CHAN_DISABLED;

@@ -1,4 +1,4 @@
-SRC_NAME=dropbear-2022.82
+SRC_NAME=dropbear-202X.XX
 
 ifeq ($(CONFIG_FIRMWARE_INCLUDE_SFTP),y)
 COPT=-DSFTPSERVER_PATH=\"/usr/libexec/sftp-server\"
@@ -6,9 +6,7 @@ else
 COPT=-DSFTPSERVER_PATH=\"/opt/libexec/sftp-server\"
 endif
 ifneq ($(CONFIG_FIRMWARE_INCLUDE_DROPBEAR_FAST_CODE),y)
-COPT+=-DDROPBEAR_SMALL_CODE=1
-else
-COPT+=-DDROPBEAR_SMALL_CODE=0
+COPT+=-DDROPBEAR_SMALL_CODE
 endif
 CFLAGS+=$(COPT) -ffunction-sections -fdata-sections
 LDFLAGS += -Wl,--gc-sections
@@ -28,7 +26,6 @@ configure:
 	autoreconf -v; \
 	./configure \
 		--prefix=/usr \
-		--disable-harden \
 		--disable-lastlog \
 		--disable-utmp \
 		--disable-utmpx \

@@ -185,8 +185,7 @@ var window_xupnpd;
 var window_params="toolbar=yes,location=yes,directories=no,status=yes,menubar=yes,scrollbars=yes,resizable=yes,copyhistory=no,width=800,height=600";
 
 function on_udpxy_link(){
-	var path = ("<% nvram_get_x("","msd_lite_enable"); %>" === "1") ? "/stat" : "/status";
-	var svc_url="http://" + lan_ipaddr + ":" + document.form.udpxy_enable_x.value + path;
+	var svc_url="http://" + lan_ipaddr + ":" + document.form.udpxy_enable_x.value + "/status";
 	window_udpxy = window.open(svc_url, "udpxy", window_params);
 	window_udpxy.focus();
 }
@@ -252,7 +251,7 @@ function on_xupnpd_link(){
 
                                     <table width="100%" align="center" cellpadding="4" cellspacing="0" class="table">
                                         <tr>
-                                            <th colspan="2" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#IPTVBase#></th>
+                                            <th colspan="2" style="background-color: #E3E3E3;"><#IPTVBase#></th>
                                         </tr>
                                         <tr id="row_mroute">
                                             <th><#RouterConfig_GWMulticastEnable_itemname#></th>
@@ -292,7 +291,7 @@ function on_xupnpd_link(){
 
                                     <table width="100%" align="center" cellpadding="4" cellspacing="0" class="table">
                                         <tr>
-                                            <th colspan="3" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#IPTVProxy#></th>
+                                            <th colspan="3" style="background-color: #E3E3E3;"><#IPTVProxy#></th>
                                         </tr>
                                         <tr>
                                             <th width="50%"><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this,6, 6);"><#RouterConfig_IPTV_itemname#>:</a></th>
@@ -325,7 +324,7 @@ function on_xupnpd_link(){
 
                                     <table width="100%" align="center" cellpadding="4" cellspacing="0" class="table">
                                         <tr>
-                                            <th colspan="2" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#IPTVMulticast#> - IGMP/MLD Snooping</th>
+                                            <th colspan="2" style="background-color: #E3E3E3;"><#IPTVMulticast#> - IGMP/MLD Snooping</th>
                                         </tr>
                                         <tr>
                                             <th width="50%"><#SwitchIgmp#></th>
@@ -391,7 +390,7 @@ function on_xupnpd_link(){
 
                                     <table width="100%" align="center" cellpadding="4" cellspacing="0" class="table">
                                         <tr>
-                                            <th colspan="2" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#SwitchStorm#></th>
+                                            <th colspan="2" style="background-color: #E3E3E3;"><#SwitchStorm#></th>
                                         </tr>
                                         <tr id="row_storm_ucast">
                                             <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 6, 7);"><#RouterConfig_GWMulticast_unknownUni_itemname#></a></th>

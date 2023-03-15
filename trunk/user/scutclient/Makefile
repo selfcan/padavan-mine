@@ -1,19 +1,14 @@
-# https://github.com/scutclient/scutclient.git
-SRC_NAME := scutclient-master
-SRC_URL = https://github.com/scutclient/scutclient/archive/refs/heads/master.zip
+# https://github.com/hanwckf/scutclient.git
+SRC_NAME := scutclient-upstream
+SRC_FILE := scutclient-a58996875c61d0cdf8ec435057befc1c87bd6863
 THISDIR = $(shell pwd)
 
-all: download_test extract_test config_test
+all: extract_test config_test
 	$(MAKE) -C $(SRC_NAME)/build
 
-download_test: 
-	( if [ ! -f $(THISDIR)/$(SRC_NAME).zip ]; then \
-		wget -t5 --timeout=20 --no-check-certificate -O $(SRC_NAME).zip $(SRC_URL); \
-	fi )
-	
 extract_test:
 	( if [ ! -d $(THISDIR)/$(SRC_NAME) ]; then \
-		unzip -qq $(SRC_NAME).zip; \
+		tar -xf $(SRC_FILE).tar.gz; \
 	fi )
 
 config_test:

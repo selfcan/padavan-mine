@@ -1,10 +1,9 @@
-THISDIR = $(shell pwd)
-SRC_NAME=openvpn-2.5.8
+SRC_NAME=openvpn-2.5.2
 
 CFLAGS += -ffunction-sections -fdata-sections -fvisibility=hidden
 LDFLAGS += -Wl,--gc-sections
 
-all: config_test
+all: extract_test config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 extract_test:
@@ -57,4 +56,4 @@ clean:
 
 romfs:
 	$(ROMFSINST) $(SRC_NAME)/src/openvpn/openvpn /usr/sbin/openvpn
-	$(ROMFSINST) -p +x $(THISDIR)/openvpn-cert.sh /usr/bin/openvpn-cert.sh
+	$(ROMFSINST) /usr/bin/openvpn-cert.sh

@@ -162,7 +162,7 @@ static const struct cc_t {
 inline int
 get_wired_mac_is_single(void)
 {
-#if defined (BOARD_N14U) || defined (BOARD_N11P) || defined (BOARD_MZ_R13) || defined (BOARD_MZ_R13P) || defined (BOARD_CR660x) || defined (BOARD_TX180X) || defined (BOARD_G7)
+#if defined (BOARD_N14U) || defined (BOARD_N11P) || defined (BOARD_MZ_R13) || defined (BOARD_MZ_R13P) || defined (BOARD_CR660x)
 	return 1;
 #else
 	return 0;
@@ -176,10 +176,8 @@ get_wired_mac_e2p_offset(int is_wan)
 	return 0x018E;
 #elif defined (BOARD_MZ_R13) || defined (BOARD_MZ_R13P)
 	return 0xe000;
-#elif defined (BOARD_CR660x) || defined (BOARD_Q20) || defined (BOARD_TX180X)
+#elif defined (BOARD_CR660x) || defined (BOARD_Q20)
 	return 0x3FFFA;
-#elif defined (BOARD_G7)
-	return 0xE00C;
 #else
 	return (is_wan) ? OFFSET_MAC_GMAC2 : OFFSET_MAC_GMAC0;
 #endif
@@ -754,11 +752,6 @@ gen_ralink_config(int is_soc_ap, int is_aband, int disable_autoscan)
 			fprintf(fp, "MuMimoDlEnable=%d\n", 0);
 			fprintf(fp, "MuMimoUlEnable=%d\n", 0);
 		}
-		/* 5g bandsteering configs */
-		if (nvram_wlan_get_int(1, "band_steering"))
-			fprintf(fp, "BandSteering=%d\n", 1);
-		else
-			fprintf(fp, "BandSteering=%d\n", 0);
 #if defined(BOARD_HAS_5G_11AX) && BOARD_HAS_5G_11AX
 		if (i_phy_mode == PHY_11AX_5G) {
 			/* 5g wifi6 mode */

@@ -1,4 +1,4 @@
-SRC_NAME = mentohust-master
+SRC_NAME = mentohust-1-master
 #https://github.com/hanwckf/mentohust-1
 THISDIR = $(shell pwd)
 

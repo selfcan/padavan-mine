@@ -51,6 +51,7 @@
 */
 #include "wsdd.h"
 #include "wsd.h"
+#include <nvram_linux.h>
 
 #define UUIDLEN	37
 
@@ -149,14 +150,6 @@ int set_getresp(const char *str, const char **next)
 	int i;
 	const char *p, *val;
 	size_t keylen, vallen;
-
-	if (str == NULL) {
-	    return -1;
-	}
-
-	if (*str == '\0') {
-	    return -1;
-	}
 
 	/* Trim leading space. */
 	while (*str && isspace(*str))
@@ -777,7 +770,7 @@ static int send_http_resp_header(int fd, struct endpoint *ep,
 	return rv;
 }
 
-char *netbiosname=NULL, *workgroup=NULL;
+static char *netbiosname, *workgroup;
 
 static int wsd_send_get_response(int fd,
 				struct endpoint *ep,
@@ -976,11 +969,10 @@ int wsd_init(struct endpoint *ep)
 		return -1;
 	}
 
-	if (!workgroup)
-		workgroup = "WORKGROUP";
+	workgroup = nvram_safe_get("st_samba_workgroup");
+	if (strlen(workgroup) == 0) workgroup = "WORKGROUP";
 
-	if (!netbiosname)
-		netbiosname = hostname;
+	netbiosname = hostname;
 
 	if (!getresp_inited)
 		init_getresp();
