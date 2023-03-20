@@ -71,9 +71,7 @@ function initial(){
 		showhide_div('row_pass1', 1);
 		showhide_div('row_pass2', 1);
 	}
-	if (!found_support_zram()) {
-		showhide_div("row_zram", 0);
-	}
+
 	load_body();
 }
 
@@ -91,7 +89,11 @@ function applyRule(){
 		document.form.next_page.value = "";
 		
 		document.form.submit();
+		
+		
 	}
+	
+
 }
 function change_on(){
 var v = document.form.reboot_schedule_enable_x.value;
@@ -141,7 +143,7 @@ function validForm(){
 		return false;
 
 	if(document.form.http_passwd2.value.length > 0)
-		alert("<#File_Pop_content_alert_desc1#>");
+		alert("<#File_Pop_content_alert_desc10#>");
 	
 	if(reboot_schedule_support){
 		if(!document.form.reboot_date_x_Sun.checked && !document.form.reboot_date_x_Mon.checked &&
@@ -276,7 +278,7 @@ function updateDateTime()
     <input type="hidden" name="preferred_lang" id="preferred_lang" value="<% nvram_get_x("", "preferred_lang"); %>">
     <input type="hidden" name="http_passwd" value="">
     <input type="hidden" name="computer_name2" value="<% nvram_get_x("", "computer_name"); %>">
-	    <input type="hidden" name="reboot_schedule" value="<% nvram_get_x("", "reboot_schedule"); %>" disabled>
+	<input type="hidden" name="reboot_schedule" value="<% nvram_get_x("", "reboot_schedule"); %>" disabled>
     <input type="hidden" name="reboot_schedule_enable" value="<% nvram_get_x("", "reboot_schedule_enable"); %>">
 
     <div class="container-fluid">
@@ -307,7 +309,7 @@ function updateDateTime()
 
                                     <table width="100%" cellpadding="4" cellspacing="0" class="table">
                                         <tr>
-                                            <th colspan="2" style="background-color: #E3E3E3;"><#Adm_System_ident#></th>
+                                            <th colspan="2" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#Adm_System_ident#></th>
                                         </tr>
                                         <tr>
                                             <th width="50%">
@@ -339,7 +341,7 @@ function updateDateTime()
 
                                     <table width="100%" cellpadding="4" cellspacing="0" class="table">
                                         <tr>
-                                            <th colspan="2" style="background-color: #E3E3E3;"><#General_x_SystemTime_itemname#></th>
+                                            <th colspan="2" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#General_x_SystemTime_itemname#></th>
                                         </tr>
                                         <tr>
                                             <th width="50%"><a class="help_tooltip"  href="javascript:void(0);" onmouseover="openTooltip(this,11,2)"><#LANHostConfig_x_TimeZone_itemname#></a></th>
@@ -472,21 +474,11 @@ function updateDateTime()
 
                                     <table width="100%" cellpadding="4" cellspacing="0" class="table">
                                         <tr>
-                                            <th colspan="2" style="background-color: #E3E3E3;"><#t2Misc#></th>
-                                        </tr>
-                                        <tr id="row_zram">
-                                            <th><a class="help_tooltip"  href="javascript:void(0);" onmouseover="openTooltip(this, 11, 5);"><#Adm_System_zram_itemname#></a></th>
-                                            <td>
-                                                <select name="zram_enable" class="input">
-                                                    <option value="0"   <% nvram_match_x("","zram_enable",  "0","selected"); %>><#btn_Disable#></option>
-                                                    <option value="1"   <% nvram_match_x("","zram_enable",  "1","selected"); %>>25% Ram</option>
-                                                    <option value="2"   <% nvram_match_x("","zram_enable",  "2","selected"); %>>50% Ram (*)</option>
-                                                </select>
-                                            </td>
+                                            <th colspan="2" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#t2Misc#></th>
                                         </tr>
 										<tr id="reboot_schedule_enable_tr">
 				                        <tr>
-                                            <th><#Reboot_Schedule#></th>
+                                            <th>启用定时重启</th>
                                             <td>
                                                 <div class="main_itoggle">
                                                     <div id="reboot_schedule_enable_on_of">
@@ -501,22 +493,22 @@ function updateDateTime()
                                             </td>
                                         </tr>
 				<tr id="reboot_schedule_date_tr">
-					<th><#Reboot_Schedule_Date#></th>
+					<th>自动重启星期</th>
 					<td>
-						<input type="checkbox" name="reboot_date_x_Sun" class="input" onclick="check_Timefield_checkbox();"><#WF_Sun#>
-						<input type="checkbox" name="reboot_date_x_Mon" class="input" onclick="check_Timefield_checkbox();"><#WF_Mon#>
-						<input type="checkbox" name="reboot_date_x_Tue" class="input" onclick="check_Timefield_checkbox();"><#WF_Tue#>
-						<input type="checkbox" name="reboot_date_x_Wed" class="input" onclick="check_Timefield_checkbox();"><#WF_Wed#>
-						<input type="checkbox" name="reboot_date_x_Thu" class="input" onclick="check_Timefield_checkbox();"><#WF_Thu#>
-						<input type="checkbox" name="reboot_date_x_Fri" class="input" onclick="check_Timefield_checkbox();"><#WF_Fri#>
-						<input type="checkbox" name="reboot_date_x_Sat" class="input" onclick="check_Timefield_checkbox();"><#WF_Sat#>
+						<input type="checkbox" name="reboot_date_x_Sun" class="input" onclick="check_Timefield_checkbox();">日
+						<input type="checkbox" name="reboot_date_x_Mon" class="input" onclick="check_Timefield_checkbox();">一
+						<input type="checkbox" name="reboot_date_x_Tue" class="input" onclick="check_Timefield_checkbox();">二
+						<input type="checkbox" name="reboot_date_x_Wed" class="input" onclick="check_Timefield_checkbox();">三
+						<input type="checkbox" name="reboot_date_x_Thu" class="input" onclick="check_Timefield_checkbox();">四
+						<input type="checkbox" name="reboot_date_x_Fri" class="input" onclick="check_Timefield_checkbox();">五
+						<input type="checkbox" name="reboot_date_x_Sat" class="input" onclick="check_Timefield_checkbox();">六
 					</td>
 				</tr>
 				<tr id="reboot_schedule_time_tr">
-					<th><#Reboot_Schedule_Time#></th>
+					<th>自动重启时间</th>
 					<td>
-						<input type="text" maxlength="2" class="input_3_table" style="width: 30px" name="reboot_time_x_hour" onKeyPress="return validator.isNumber(this,event);" onblur="validator.timeRange(this, 0);" autocorrect="off" autocapitalize="off"><#Hour#>:
-						<input type="text" maxlength="2" class="input_3_table" style="width: 30px" name="reboot_time_x_min" onKeyPress="return validator.isNumber(this,event);" onblur="validator.timeRange(this, 1);" autocorrect="off" autocapitalize="off"><#Minute#>
+						<input type="text" maxlength="2" class="input_3_table" style="width: 30px" name="reboot_time_x_hour" onKeyPress="return validator.isNumber(this,event);" onblur="validator.timeRange(this, 0);" autocorrect="off" autocapitalize="off">时:
+						<input type="text" maxlength="2" class="input_3_table" style="width: 30px" name="reboot_time_x_min" onKeyPress="return validator.isNumber(this,event);" onblur="validator.timeRange(this, 1);" autocorrect="off" autocapitalize="off">分
 					</td>
 				</tr>
                                         <tr>

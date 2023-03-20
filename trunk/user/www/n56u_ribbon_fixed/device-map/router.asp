@@ -471,6 +471,9 @@ function submitForm(){
 	if(document.form.wl_wpa_psk.value == "Please type Password")
 		document.form.wl_wpa_psk.value = "";
 
+	if(!validate_string_ssid(document.form.wl_ssid))
+		return false;
+
 	if(auth_mode == "psk"){
 		if(!validate_psk(document.form.wl_wpa_psk))
 			return false;
@@ -534,6 +537,8 @@ window.onunload  = function(){
 	if(document.form.wl_wpa_psk.value == "Please type Password")
 		document.form.wl_wpa_psk.value = "";
 
+	validate_string_ssid(document.form.wl_ssid) 
+
 	if(auth_mode == "psk")
 		validate_psk(document.form.wl_wpa_psk)
 
@@ -580,7 +585,7 @@ window.onunload  = function(){
 <input type="hidden" name="wl_key2" value="">
 <input type="hidden" name="wl_key3" value="">
 <input type="hidden" name="wl_key4" value="">
-<input type="hidden" name="wl_ssid2" value="<% nvram_get_x("", "wl_ssid"); %>">
+<input type="hidden" name="wl_ssid2" value="<% nvram_char_to_ascii("", "wl_ssid"); %>">
 <input type="hidden" name="wl_wpa_psk_org" value="<% nvram_char_to_ascii("", "wl_wpa_psk"); %>">
 <input type="hidden" name="wl_auth_mode_orig" value="<% nvram_get_x("","wl_auth_mode"); %>">
 <input type="hidden" name="wl_wpa_mode_orig" value="<% nvram_get_x("", "wl_wpa_mode"); %>">

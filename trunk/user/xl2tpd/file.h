@@ -16,7 +16,7 @@
 #ifndef _FILE_H
 #define _FILE_H
 
-#define STRLEN 100              /* Length of a string */
+#define STRLEN 100               /* Length of a string */
 
 /* Definition of a keyword */
 struct keyword
@@ -146,14 +146,12 @@ struct global
 {
     unsigned int listenaddr;    /* IP address to bind to */ 
     int port;                   /* Port number to listen to */
-
     char authfile[STRLEN];      /* File containing authentication info */
     char altauthfile[STRLEN];   /* File containing authentication info */
     char configfile[STRLEN];    /* File containing configuration info */
     char altconfigfile[STRLEN]; /* File containing configuration info */
     char pidfile[STRLEN];       /* File containing the pid number*/
     char controlfile[STRLEN];   /* Control file name (named pipe) */
-    char controltos[STRLEN];    /* Control TOS value */
     int daemon;                 /* Use daemon mode? */
     int syslog;                 /* Use syslog for logging? */
     int accesscontrol;          /* Use access control? */
@@ -167,9 +165,6 @@ struct global
     int sarefnum;		/* Value of IPSEC_REFINFO used by kernel
 				 * (we used to pick 22, but 2.6.36+ took that, so now we pick 30)
 				 * Changed in SAref patch in openswan 2.6.36 for linux 2.6.36+ */
-    int max_retries;            /* Max retries before closing tunnel
-                                   or stop re-transmitting */
-    int cap_backoff;		/* Limit seconds between exponential backoff */
 };
 
 extern struct global gconfig;   /* Global configuration options */
@@ -184,5 +179,4 @@ extern int init_config ();      /* Read in the config file */
 extern int parse_one_option (char *word, char *value, int context, void *item);
 /* Allocate memory and filled up new lac */
 extern struct lac *new_lac ();
-extern struct lns *new_lns ();
 #endif

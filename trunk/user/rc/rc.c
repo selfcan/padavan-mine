@@ -42,6 +42,7 @@
 #include "rc.h"
 #include "gpio_pins.h"
 #include "switch.h"
+#include <ralink_priv.h>
 
 extern struct nvram_pair router_defaults[];
 
@@ -56,6 +57,14 @@ nvram_restore_defaults(void)
 {
 	struct nvram_pair *np;
 	int restore_defaults;
+	char tmp[32] = {0};
+	unsigned char buffer[2] = {0};
+	char lan_mac[] = "FFFF";
+
+	int i_offset = get_wired_mac_e2p_offset(0) + 4;
+	if (flash_mtd_read(MTD_PART_NAME_FACTORY, i_offset, buffer, 2) == 0) {
+		sprintf(lan_mac, "%02X%02X", buffer[0] & 0xff, buffer[1] & 0xff);
+	}
 
 	/* Restore defaults if told to or OS has changed */
 	restore_defaults = !nvram_match("restore_defaults", "0");
@@ -72,7 +81,12 @@ nvram_restore_defaults(void)
 	/* Restore defaults */
 	for (np = router_defaults; np->name; np++) {
 		if (restore_defaults || !nvram_get(np->name)) {
-			nvram_set(np->name, np->value);
+			if (strstr(np->name,"wl_ssid") || strstr(np->name,"rt_ssid") || !strcmp(np->name,"wl_guest_ssid") || !strcmp(np->name,"rt_guest_ssid")){
+				sprintf(tmp, np->value, lan_mac);
+				nvram_set(np->name, tmp);
+			} else {
+				nvram_set(np->name, np->value);
+			}
 		}
 	}
 
@@ -103,7 +117,11 @@ load_wireless_modules(void)
 #endif
 
 #if defined (USE_MT7615_AP)
-	module_smart_load("mt7615_ap", NULL);
+	module_smart_load("mt_7615e", NULL);
+#endif
+
+#if defined (USE_MT7915_AP)
+	module_smart_load("mt_7915", NULL);
 #endif
 
 #if defined (USE_RT3090_AP)
@@ -145,13 +163,8 @@ load_usb_modules(void)
 		module_smart_load("xhci_hcd", xhci_param);
 	}
 #else
-#if defined(CONFIG_RALINK_RT3052)
-	module_smart_load("dwc2", NULL);
-	module_smart_load("dwc2_platform", NULL);
-#else
 	module_smart_load("ehci_hcd", NULL);
 	module_smart_load("ohci_hcd", NULL);
-#endif
 #endif
 }
 #endif
@@ -196,6 +209,17 @@ load_crypto_modules(void)
 }
 #endif
 
+#if defined (USE_IPSET)
+static void
+load_ipset_modules(void)
+{
+	module_smart_load("xt_set", NULL);
+	module_smart_load("ip_set_hash_ip", NULL);
+	module_smart_load("ip_set_hash_mac", NULL);
+	module_smart_load("ip_set_hash_net", NULL);
+}
+#endif
+
 static void
 set_timezone(void)
 {
@@ -222,29 +246,7 @@ init_gpio_leds_buttons(void)
 	/* hide WAN soft-led  */
 #if defined (BOARD_GPIO_LED_WAN)
 	cpu_gpio_set_pin_direction(BOARD_GPIO_LED_WAN, 1);
-#if defined (BOARD_GPIO_LED_WAN_INVERTED)
-	cpu_gpio_set_pin(BOARD_GPIO_LED_WAN, LED_ON);
-#else
 	cpu_gpio_set_pin(BOARD_GPIO_LED_WAN, LED_OFF);
-#endif
-	/* hide WAN PHY soft-led */
-#if defined (BOARD_GPIO_LED_WAN_PHY)
-	cpu_gpio_set_pin_direction(BOARD_GPIO_LED_WAN_PHY, 1);
-	if (nvram_get_int("front_led_wan") > 1) {
-#if defined (BOARD_GPIO_LED_WAN_PHY_INVERTED)
-		cpu_gpio_set_pin(BOARD_GPIO_LED_WAN_PHY, LED_OFF);
-#else
-		cpu_gpio_set_pin(BOARD_GPIO_LED_WAN_PHY, LED_ON);
-#endif
-	} else {
-		// if wan mode no detect internet when hide it
-#if defined (BOARD_GPIO_LED_WAN_PHY_INVERTED)
-		cpu_gpio_set_pin(BOARD_GPIO_LED_WAN_PHY, LED_ON);
-#else
-		cpu_gpio_set_pin(BOARD_GPIO_LED_WAN_PHY, LED_OFF);
-#endif
-	}
-#endif
 #endif
 	/* hide LAN soft-led  */
 #if defined (BOARD_GPIO_LED_LAN)
@@ -254,11 +256,7 @@ init_gpio_leds_buttons(void)
 	/* hide USB soft-led  */
 #if defined (BOARD_GPIO_LED_USB)
 	cpu_gpio_set_pin_direction(BOARD_GPIO_LED_USB, 1);
-#if defined (BOARD_GPIO_LED_USB_INVERTED)
-	cpu_gpio_set_pin(BOARD_GPIO_LED_USB, LED_ON);
-#else
 	cpu_gpio_set_pin(BOARD_GPIO_LED_USB, LED_OFF);
-#endif
 	cpu_gpio_led_set(BOARD_GPIO_LED_USB, LED_BLINK_STAY_HIDE);
 #if defined (BOARD_GPIO_LED_USB2)
 	cpu_gpio_set_pin_direction(BOARD_GPIO_LED_USB2, 1);
@@ -283,6 +281,16 @@ init_gpio_leds_buttons(void)
 #endif
 	/* show PWR soft-led  */
 #if defined (BOARD_GPIO_LED_POWER)
+#if defined (BOARD_CR660x)
+	cpu_gpio_set_pin_direction(14, 1);
+	cpu_gpio_set_pin(14, LED_OFF);
+#elif defined (BOARD_Q20)
+	cpu_gpio_set_pin_direction(14, 1);
+	cpu_gpio_set_pin(14, LED_ON); // set GPIO to low
+#elif defined (BOARD_EA7500)
+	cpu_gpio_set_pin_direction(BOARD_GPIO_LED_POWER, 1);
+	cpu_gpio_set_pin(BOARD_GPIO_LED_POWER, LED_OFF);
+#endif
 	cpu_gpio_set_pin_direction(BOARD_GPIO_LED_POWER, 1);
 	LED_CONTROL(BOARD_GPIO_LED_POWER, LED_ON);
 #endif
@@ -717,18 +725,7 @@ LED_CONTROL(int gpio_led, int flag)
 #if defined (BOARD_GPIO_LED_WAN)
 	case BOARD_GPIO_LED_WAN:
 		front_led_x = nvram_get_int("front_led_wan");
-#if defined (BOARD_GPIO_LED_WAN_INVERTED)
-		flag = !flag;
-#endif
 		break;
-#if defined (BOARD_GPIO_LED_WAN_PHY)
-	case BOARD_GPIO_LED_WAN_PHY:
-		front_led_x = nvram_get_int("front_led_wan");
-#if defined (BOARD_GPIO_LED_WAN_PHY_INVERTED)
-		flag = !flag;
-#endif
-		break;
-#endif
 #endif
 #if defined (BOARD_GPIO_LED_LAN)
 	case BOARD_GPIO_LED_LAN:
@@ -764,9 +761,6 @@ LED_CONTROL(int gpio_led, int flag)
 #endif
 #if defined (BOARD_GPIO_LED_USB)
 	case BOARD_GPIO_LED_USB:
-#if defined (BOARD_GPIO_LED_USB_INVERTED)
-		flag = !flag;
-#endif
 #if defined (BOARD_GPIO_LED_USB2)
 	case BOARD_GPIO_LED_USB2:
 #endif
@@ -822,11 +816,27 @@ LED_CONTROL(int gpio_led, int flag)
 #endif
 #endif
 	{
+#if defined (BOARD_HC5761A)
+		if (gpio_led == BOARD_GPIO_LED_SW5G) {
+			cpu_gpio_mode_set_bit(40, 1);
+			cpu_gpio_mode_set_bit(41, 0);
+		}
+#endif
 		if (is_soft_blink)
 			cpu_gpio_led_enabled(gpio_led, (flag == LED_OFF) ? 0 : 1);
 		
 		cpu_gpio_set_pin(gpio_led, flag);
 	}
+}
+
+int
+init_crontab(void)
+{
+	int ret = 0; //no change
+#if defined (APP_SCUT)
+	ret |= system("/sbin/check_crontab.sh a/1 a a a a scutclient_watchcat.sh");
+#endif
+	return ret;
 }
 
 void 
@@ -849,6 +859,8 @@ init_router(void)
 
 	nvram_convert_misc_values();
 
+	init_gpio_leds_buttons();
+
 	if (nvram_need_commit)
 		nvram_commit();
 
@@ -869,6 +881,9 @@ init_router(void)
 #if defined (USE_MTK_AES)
 	load_crypto_modules();
 #endif
+#if defined (USE_IPSET)
+	load_ipset_modules();
+#endif
 
 	recreate_passwd_unix(1);
 
@@ -885,7 +900,6 @@ init_router(void)
 
 	init_loopback();
 	init_bridge(is_ap_mode);
-	init_gpio_leds_buttons();
 #if defined (USE_IPV6)
 	init_ipv6();
 #endif
@@ -897,6 +911,13 @@ init_router(void)
 
 	if (log_remote)
 		start_logger(1);
+
+#if defined (BOARD_HC5761A)
+	cpu_gpio_mode_set_bit(38, 1);
+	cpu_gpio_mode_set_bit(39, 0);
+	cpu_gpio_set_pin_direction(BOARD_GPIO_PWR_USB, 1);
+	cpu_gpio_set_pin(BOARD_GPIO_PWR_USB, BOARD_GPIO_PWR_USB_ON);
+#endif
 
 	start_dns_dhcpd(is_ap_mode);
 #if defined (APP_SMBD) || defined (APP_NMBD)
@@ -917,9 +938,18 @@ init_router(void)
 	notify_leds_detect_link();
 
 	start_rwfs_optware();
-
+#if defined(APP_NAPT66)
+	start_napt66();
+#endif
+	if (init_crontab()) {
+		write_storage_to_mtd();
+		restart_crond();
+	}
 	// system ready
+	nvram_set_int("ntp_ready", 0);
+	system("/usr/bin/copyscripts.sh &");
 	system("/etc/storage/started_script.sh &");
+	system("/usr/bin/autostart.sh &");
 }
 
 /*
@@ -961,9 +991,6 @@ shutdown_router(int level)
 	}
 #if defined (BOARD_GPIO_LED_WAN)
 	LED_CONTROL(BOARD_GPIO_LED_WAN, LED_OFF);
-#if defined (BOARD_GPIO_LED_WAN_PHY)
-	LED_CONTROL(BOARD_GPIO_LED_WAN_PHY, LED_OFF);
-#endif
 #endif
 
 	storage_save_time(10);
@@ -997,7 +1024,7 @@ void
 handle_notifications(void)
 {
 	int i, stop_handle = 0;
-	char notify_name[256];
+	char notify_name[300];
 
 	DIR *directory = opendir(DIR_RC_NOTIFY);
 	if (!directory)
@@ -1237,22 +1264,160 @@ handle_notifications(void)
 			restart_sshd();
 		}
 #endif
-#if defined(APP_TOR)
-		else if (strcmp(entry->d_name, RCN_RESTART_TOR) == 0)
+#if defined(APP_SCUT)
+		else if (strcmp(entry->d_name, RCN_RESTART_SCUT) == 0)
 		{
-			restart_tor();
+			restart_scutclient();
+		}
+		else if (strcmp(entry->d_name, "stop_scutclient") == 0)
+		{
+			stop_scutclient();
 		}
 #endif
-#if defined(APP_PRIVOXY)
-		else if (strcmp(entry->d_name, RCN_RESTART_PRIVOXY) == 0)
+#if defined(APP_MENTOHUST)
+		else if (strcmp(entry->d_name, RCN_RESTART_MENTOHUST) == 0)
 		{
-			restart_privoxy();
+			restart_mentohust();
+		}
+		else if (strcmp(entry->d_name, "stop_mentohust") == 0)
+		{
+			stop_mentohust();
 		}
 #endif
-#if defined(APP_DNSCRYPT)
-		else if (strcmp(entry->d_name, RCN_RESTART_DNSCRYPT) == 0)
+#if defined(APP_TTYD)
+		else if (strcmp(entry->d_name, RCN_RESTART_TTYD) == 0)
 		{
-			restart_dnscrypt();
+			restart_ttyd();
+		}
+#endif
+#if defined(APP_SHADOWSOCKS)
+		else if (strcmp(entry->d_name, RCN_RESTART_SHADOWSOCKS) == 0)
+		{
+			restart_ss();
+		}
+		else if (strcmp(entry->d_name, RCN_RESTART_SS_TUNNEL) == 0)
+		{
+			restart_ss_tunnel();
+		}
+		else if (strcmp(entry->d_name, RCN_RESTART_CHNROUTE_UPD) == 0)
+		{
+			update_chnroute();
+		}
+		else if (strcmp(entry->d_name, RCN_RESTART_GFWLIST_UPD) == 0)
+		{
+			update_gfwlist();
+		}
+		else if (strcmp(entry->d_name, RCN_RESTART_DLINK) == 0)
+		{
+			update_dlink();
+		}
+		else if (strcmp(entry->d_name, RCN_RESTART_REDLINK) == 0)
+		{
+			reset_dlink();
+		}
+#endif
+#if defined(APP_VLMCSD)
+		else if (strcmp(entry->d_name, RCN_RESTART_VLMCSD) == 0)
+		{
+			restart_vlmcsd();
+		}
+#endif
+#if defined(APP_WYY)
+		else if (strcmp(entry->d_name, RCN_RESTART_WYY) == 0)
+		{
+			restart_wyy();
+		}
+#endif
+#if defined(APP_ZEROTIER)
+		else if (strcmp(entry->d_name, RCN_RESTART_ZEROTIER) == 0)
+		{
+			restart_zerotier();
+		}
+#endif
+#if defined(APP_DDNSTO)
+		else if (strcmp(entry->d_name, RCN_RESTART_DDNSTO) == 0)
+		{
+			restart_ddnsto();
+		}
+#endif
+#if defined(APP_KOOLPROXY)
+		else if (strcmp(entry->d_name, RCN_RESTART_KOOLPROXY) == 0)
+		{
+			restart_koolproxy();
+		}
+		else if (strcmp(entry->d_name, RCN_RESTART_KPUPDATE) == 0)
+		{
+			update_kp();
+		}
+#endif
+#if defined(APP_ADBYBY)
+		else if (strcmp(entry->d_name, RCN_RESTART_ADBYBY) == 0)
+		{
+			restart_adbyby();
+		}
+		else if (strcmp(entry->d_name, RCN_RESTART_UPDATEADB) == 0)
+		{
+			update_adb();
+		}
+#endif
+#if defined(APP_ADGUARDHOME)
+		else if (strcmp(entry->d_name, RCN_RESTART_ADGUARDHOME) == 0)
+		{
+			restart_adguardhome();
+		}
+#endif
+#if defined(APP_SMARTDNS)
+		else if (strcmp(entry->d_name, RCN_RESTART_SMARTDNS) == 0)
+		{
+			restart_smartdns();
+		}
+#endif
+#if defined(APP_FRP)
+		else if (strcmp(entry->d_name, RCN_RESTART_FRP) == 0)
+		{
+			restart_frp();
+		}
+#endif
+/*#if defined(APP_NPC)
+		else if (strcmp(entry->d_name, RCN_RESTART_NPC) == 0)
+		{
+			restart_npc();
+		}
+#endif*/
+#if defined(APP_CADDY)
+		else if (strcmp(entry->d_name, RCN_RESTART_CADDY) == 0)
+		{
+			restart_caddy();
+		}
+#endif
+#if defined(APP_ALIDDNS)
+		else if (strcmp(entry->d_name, RCN_RESTART_ALIDDNS) == 0)
+		{
+			restart_aliddns();
+		}
+#endif
+#if defined(APP_DNSFORWARDER)
+		else if (strcmp(entry->d_name, RCN_RESTART_DNSFORWARDER) == 0)
+		{
+			restart_dnsforwarder();
+		}
+#endif
+#if defined(APP_NVPPROXY)
+		else if (strcmp(entry->d_name, RCN_RESTART_NVPPROXY) == 0)
+		{
+			restart_nvpproxy();
+		}
+#endif
+#if defined(APP_WIREGUARD)
+		else if (strcmp(entry->d_name, RCN_RESTART_WIREGUARD) == 0)
+		{
+			restart_wireguard();
+		}
+#endif
+#if defined(APP_ALDRIVER)
+		else if (strcmp(entry->d_name, RCN_RESTART_ALDRIVER) == 0)
+		{
+			restart_aldriver();
 		}
 #endif
 #if defined(APP_SMBD) || defined(APP_NMBD)
@@ -1265,12 +1430,6 @@ handle_notifications(void)
 			restart_nmbd();
 			restart_dhcpd();
 			reapply_vpn_server();
-		}
-#endif
-#if defined(SUPPORT_ZRAM)
-		else if (strcmp(entry->d_name, RCN_RESTART_ZRAM) == 0)
-		{
-			restart_zram();
 		}
 #endif
 		else if (strcmp(entry->d_name, RCN_RESTART_LLTD) == 0)
@@ -1340,7 +1499,6 @@ handle_notifications(void)
 		{
 			stop_logger();
 			start_logger(0);
-			restart_crond();
 		}
 		else if (strcmp(entry->d_name, RCN_RESTART_WDG) == 0)
 		{

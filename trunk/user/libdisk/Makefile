@@ -8,10 +8,10 @@ SHDIR = $(ROOTDIR)/user/shared
 include $(SHDIR)/boards.mk
 include $(SHDIR)/cflags.mk
 
-CFLAGS += -fPIC -ffunction-sections -fdata-sections
+CFLAGS += -fPIC
 CFLAGS += -I. -I$(SHDIR) -I$(SHDIR)/include
 
-LDFLAGS += -Wl,--gc-sections -L$(SHDIR) -lshared
+LDFLAGS = -L$(SHDIR) -lshared
 
 OBJS = dev_info.o disk_io_tools.o disk_initial.o disk_share.o
 ifdef CONFIG_USB_SUPPORT
@@ -28,7 +28,7 @@ test_share: test_share.o libdisk.so
 
 romfs:
 	$(ROMFSINST) /lib/libdisk.so
-	if [ "$(CONFIG_FIRMWARE_INCLUDE_SMBD)" = "y" ] || [ "$(CONFIG_FIRMWARE_INCLUDE_SMBD36)" = "y" ] || [ "$(CONFIG_FIRMWARE_INCLUDE_FTPD)" = "y" ] ; then \
+	if [ "$(CONFIG_FIRMWARE_INCLUDE_SMBD)" = "y" ] || [ "$(CONFIG_FIRMWARE_INCLUDE_FTPD)" = "y" ] ; then \
 		$(ROMFSINST) /sbin/test_share ; \
 	fi;
 

@@ -55,6 +55,7 @@
 #include "common.h"
 #include "nvram_x.h"
 #include "httpd.h"
+#include "dbapi.h"
 
 #define GROUP_FLAG_REFRESH 	0
 #define GROUP_FLAG_DELETE 	1
@@ -72,10 +73,15 @@ static int wl_modified = 0;
 static int rt_modified = 0;
 static u64 restart_needed_bits = 0;
 
-static char post_buf[32768] = {0};
+//static char post_buf[32768] = {0};
+static char post_buf[65535] = {0};
+static char post_buf_backup[65535] = {0};
+static char post_json_buf[65535] = {0};
 static char next_host[128] = {0};
 static char SystemCmd[128] = {0};
 static int  group_del_map[MAX_GROUP_COUNT+2];
+
+extern void unescape(char *s);
 
 extern struct evDesc events_desc[];
 extern int auth_nvram_changed;
@@ -95,7 +101,12 @@ nvram_commit_safe(void)
 void
 sys_reboot(void)
 {
+#ifdef MTD_FLASH_32M_REBOOT_BUG
+	doSystem("/sbin/mtd_storage.sh %s", "save");
+	system("/bin/mtd_write -r unlock mtd1");
+#else
 	kill(1, SIGTERM);
+#endif
 }
 
 char *
@@ -353,8 +364,6 @@ write_textarea_to_file(const char* value, const char* dir_name, const char* file
 			else
 				chmod(real_path, 0644);
 			ret = 1;
-			if (nvram_get_int("nvram_manual") != 1)
-				doSystem("/sbin/mtd_storage.sh %s", "save");			
 		}
 	}
 
@@ -660,7 +669,7 @@ dump_file(webs_t wp, char *filename)
 	}
 
 	extensions = strrchr(filename, '.');
-	if (extensions && strcmp(extensions, ".key") == 0) {
+	if (!get_login_safe() && extensions && strcmp(extensions, ".key") == 0) {
 		return websWrite(wp, "%s", "# !!!This is hidden write-only secret key file!!!\n");
 	}
 
@@ -715,10 +724,6 @@ ej_dump(int eid, webs_t wp, int argc, char **argv)
 		snprintf(filename, sizeof(filename), "%s/%s", STORAGE_SCRIPTS_DIR, file+8);
 	else if (strncmp(file, "crontab.", 8)==0)
 		snprintf(filename, sizeof(filename), "%s/%s", STORAGE_CRONTAB_DIR, nvram_safe_get("http_username"));
-	else if (strncmp(file, "torconf.", 8)==0)
-		snprintf(filename, sizeof(filename), "%s/%s", STORAGE_TORCONF_DIR, file+8);
-	else if (strncmp(file, "privoxy.", 8)==0)
-		snprintf(filename, sizeof(filename), "%s/%s", STORAGE_PRIVOXY_DIR, file+8);
 	else
 		snprintf(filename, sizeof(filename), "%s/%s", "/tmp", file);
 
@@ -915,18 +920,6 @@ validate_asp_apply(webs_t wp, int sid)
 					restart_needed_bits |= event_mask;
 			} else if (!strncmp(v->name, "ovpncli.", 8)) {
 				if (write_textarea_to_file(value, STORAGE_OVPNCLI_DIR, file_name))
-					restart_needed_bits |= event_mask;
-			}
-#endif
-#if defined(APP_TOR)
-			else if (!strncmp(v->name, "torconf.", 8)) {
-				if (write_textarea_to_file(value, STORAGE_TORCONF_DIR, file_name))
-					restart_needed_bits |= event_mask;
-			}
-#endif
-#if defined(APP_PRIVOXY)
-			else if (!strncmp(v->name, "privoxy.", 8)) {
-				if (write_textarea_to_file(value, STORAGE_PRIVOXY_DIR, file_name))
 					restart_needed_bits |= event_mask;
 			}
 #endif
@@ -1926,6 +1919,476 @@ wan_action_hook(int eid, webs_t wp, int argc, char **argv)
 	return 0;
 }
 
+#if defined (APP_SCUT)
+static int scutclient_action_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int needed_seconds = 2;
+	char *scut_action = websGetVar(wp, "connect_action", "");
+
+	if (!strcmp(scut_action, "Reconnect")) {
+		notify_rc(RCN_RESTART_SCUT);
+	}
+	else if (!strcmp(scut_action, "Disconnect")) {
+		notify_rc("stop_scutclient");
+	}
+
+	websWrite(wp, "<script>restart_needed_time(%d);</script>\n", needed_seconds);
+	return 0;
+}
+
+static int scutclient_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int status_code = pids("bin_scutclient");
+	websWrite(wp, "function scutclient_status() { return %d;}\n", status_code);
+	return 0;
+}
+
+static int scutclient_version_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	FILE *fstream = NULL;
+	char ver[8];
+	memset(ver, 0, sizeof(ver));
+	fstream = popen("/usr/bin/bin_scutclient -V","r");
+	if(fstream) {
+		fgets(ver, sizeof(ver), fstream);
+		pclose(fstream);
+		if (strlen(ver) > 0)
+			ver[strlen(ver) - 1] = 0;
+		if (!(ver[0]>='0' && ver[0]<='9'))
+			sprintf(ver, "%s", "unknown");
+	} else {
+		sprintf(ver, "%s", "unknown");
+	}
+	websWrite(wp, "function scutclient_version() { return '%s';}\n", ver);
+	return 0;
+}
+#endif
+
+#if defined (APP_MENTOHUST)
+static int mentohust_action_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int needed_seconds = 2;
+	char *action = websGetVar(wp, "connect_action", "");
+
+	if (!strcmp(action, "Reconnect")) {
+		notify_rc(RCN_RESTART_MENTOHUST);
+	}
+	else if (!strcmp(action, "Disconnect")) {
+		notify_rc("stop_mentohust");
+	}
+
+	websWrite(wp, "<script>restart_needed_time(%d);</script>\n", needed_seconds);
+	return 0;
+}
+
+static int mentohust_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int status_code = pids("bin_mentohust");
+	websWrite(wp, "function mentohust_status() { return %d;}\n", status_code);
+	return 0;
+}
+#endif
+
+#if defined (APP_SHADOWSOCKS)
+static int shadowsocks_action_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int needed_seconds = 3;
+	char *ss_action = websGetVar(wp, "connect_action", "");
+
+	if (!strcmp(ss_action, "Reconnect")) {
+		notify_rc(RCN_RESTART_SHADOWSOCKS);
+	} else if (!strcmp(ss_action, "Update_chnroute")) {
+		notify_rc(RCN_RESTART_CHNROUTE_UPD);
+		needed_seconds = 1;
+	} else if (!strcmp(ss_action, "Reconnect_ss_tunnel")) {
+		notify_rc(RCN_RESTART_SS_TUNNEL);
+	} else if (!strcmp(ss_action, "Update_gfwlist")) {
+		notify_rc(RCN_RESTART_GFWLIST_UPD);
+	}else if (!strcmp(ss_action, "Update_dlink")) {
+		notify_rc(RCN_RESTART_DLINK);
+	}else if (!strcmp(ss_action, "Reset_dlink")) {
+		notify_rc(RCN_RESTART_REDLINK);
+	}
+	
+	websWrite(wp, "<script>restart_needed_time(%d);</script>\n", needed_seconds);
+	return 0;
+}
+#if defined(APP_SHADOWSOCKS)
+static int
+applydb_cgi(webs_t wp, char *urlPrefix, char *webDir, int arg,
+		char *url, char *path, char *query)
+{
+	char *action_mode;
+	char *action_script;
+	char dbjson[100][9999];
+	char dbvar[2048];
+	char dbval[9999];
+	char notify_cmd[128];
+	char db_cmd[128];
+	int i, j;
+	char *result = NULL;
+	char *temp = NULL;
+	char *name = websGetVar(wp, "p","");
+	char scPath[128];
+	char *post_db_buf = post_json_buf;
+
+	action_mode = websGetVar(wp, "action_mode", "");
+	action_script = websGetVar(wp, "action_script", "");
+	char userm[] = "deleting";
+	char useping[] = "ping";
+	char useaping[] = "allping";
+	char usedlink[] = "dlink";
+	char useddlink[] = "ddlink";
+	
+	dbclient client;
+	dbclient_start(&client);
+	if (strlen(name) <= 0) {
+		printf("No \"name\"!\n");
+	}
+	if ( !strcmp("", post_db_buf)){
+		//get
+		sprintf(post_db_buf, "%s", post_buf_backup+1);
+		unescape(post_db_buf);
+		//logmessage("HTTPD", "url: %s,%s", post_db_buf, name);
+		strcpy(post_json_buf, post_db_buf);
+		result = strtok( post_json_buf, "&" );
+		i =0;
+	while( result != NULL )
+	{
+		if (result!=NULL)
+		{
+		strcpy(dbjson[i], result);
+		i++;
+			result = strtok( NULL, "&" );
+		}
+	}
+	for (j =0; j < i; j++)
+	{
+		if(!strncasecmp(dbjson[j], name, strlen(name))){
+				memset(dbvar,'\0',sizeof(dbvar));
+				memset(dbval,'\0',sizeof(dbval));
+				temp=strstr(dbjson[j], "=");
+				strcpy(dbval, temp+1);
+				strncpy(dbvar, dbjson[j], strlen(dbjson[j])-strlen(temp));
+			//logmessage("HTTPD", "name: %s post: %s", dbvar, userm);
+			if(strcmp(dbval,userm) == 0)
+				doSystem("dbus remove %s", dbvar);
+			else if(strcmp(dbval,useping) == 0)
+				doSystem("/etc_ro/ss/ping.sh %s", dbvar);
+			else if(strcmp(dbval,useaping) == 0)
+				doSystem("/etc_ro/ss/allping.sh");
+			else if(strcmp(dbval,usedlink) == 0)
+				doSystem("/usr/bin/update_dlink.sh %s", "start");
+			else if(strcmp(dbval,useddlink) == 0)
+				doSystem("/usr/bin/update_dlink.sh %s", "reset");
+			else
+				doSystem("dbus set %s='%s'", dbvar, dbval);
+		}
+	}
+	} else {
+	//post
+	unescape(post_db_buf);
+	//logmessage("HTTPD", "name: %s post: %s", name, post_json_buf);
+	//logmessage("HTTPD", "name: %s post: %s", name, post_db_buf);
+	strcpy(post_json_buf, post_db_buf);
+	result = strtok( post_json_buf, "&" );
+	i =0;
+	while( result != NULL )
+	{
+		if (result!=NULL)
+		{
+		strcpy(dbjson[i], result);
+		i++;
+			result = strtok( NULL, "&" );
+		}
+	}
+	for (j =0; j < i; j++)
+	{
+		if(!strncasecmp(dbjson[j], name, strlen(name))){
+				memset(dbvar,'\0',sizeof(dbvar));
+				memset(dbval,'\0',sizeof(dbval));
+				temp=strstr(dbjson[j], "=");
+				strcpy(dbval, temp+1);
+				strncpy(dbvar, dbjson[j], strlen(dbjson[j])-strlen(temp));
+			//logmessage("HTTPD", "name: %s post: %s", dbvar, dbval);
+			if(strcmp(dbval,userm) == 0)
+				doSystem("dbus remove %s", dbvar);
+			else if(strcmp(dbval,useping) == 0)
+				doSystem("/etc_ro/ss/ping.sh %s", dbvar);
+			else if(strcmp(dbval,useaping) == 0)
+				doSystem("/etc_ro/ss/allping.sh");
+			else if(strcmp(dbval,usedlink) == 0)
+				doSystem("/usr/bin/update_dlink.sh %s", "start");
+			else if(strcmp(dbval,useddlink) == 0)
+				doSystem("/usr/bin/update_dlink.sh %s", "reset");
+			else
+				doSystem("dbus set %s='%s'", dbvar, dbval);
+		}
+	}
+	}
+	dbclient_end(&client);
+	doSystem("/sbin/mtd_storage.sh %s", "save");
+	return 0;
+}
+
+static void
+do_applydb_cgi(char *url, FILE *stream)
+{
+    //applydb_cgi(url, stream);
+	applydb_cgi(stream, NULL, NULL, 0, url, NULL, NULL);
+}
+
+static int db_print(dbclient* client, webs_t wp, char* prefix, char* key, char* value) {
+	websWrite(wp,"o[\"%s\"]=\'%s\';\n", key, value);
+	return 0;
+}
+
+static void
+do_dbconf(char *url, FILE *stream)
+{
+	char *name = NULL;
+	char * delim = ",";
+	char *pattern = websGetVar(wp, "p","");
+	char *dup_pattern = strdup(pattern);
+	char *sepstr = dup_pattern;
+	dbclient client;
+	dbclient_start(&client);
+	if(strstr(sepstr,delim)) {
+		for(name = strsep(&sepstr, delim); name != NULL; name = strsep(&sepstr, delim)) {
+			websWrite(stream,"var db_%s=(function() {\nvar o={};\n", name);
+
+			dbclient_list(&client, name, stream, db_print);
+			websWrite(stream,"return o;\n})();\n" );
+		}
+	} else {
+		name= strdup(pattern);
+		websWrite(stream,"var db_%s=(function() {\nvar o={};\n", name);
+		dbclient_list(&client, name, stream, db_print);
+		websWrite(stream,"return o;\n})();\n" );
+	}
+	free(dup_pattern);
+	dbclient_end(&client);
+}
+#endif
+static int shadowsocks_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int ss_status_code = pids("ss-redir");
+	if (ss_status_code == 0){
+		ss_status_code = pids("ssr-redir");
+	}
+	if (ss_status_code == 0){
+		ss_status_code = pids("v2ray");
+	}
+
+	if (ss_status_code == 0){
+		ss_status_code = pids("trojan");
+	}
+	if (ss_status_code == 0){
+		ss_status_code = pids("kumasocks");
+	}
+	websWrite(wp, "function shadowsocks_status() { return %d;}\n", ss_status_code);
+	int ss_tunnel_status_code = pids("ss-local");
+	websWrite(wp, "function shadowsocks_tunnel_status() { return %d;}\n", ss_tunnel_status_code);
+	int ss_mode = nvram_get_int("ss_enable");
+	int ss_check_code = 2;
+	if ( ss_mode == 1)
+	{
+	ss_check_code = nvram_get_int("check_mode");
+	}
+	websWrite(wp, "function shadowsocks_check_status() { return %d;}\n", ss_check_code);
+	return 0;
+}
+
+static int rules_count_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	FILE *fstream = NULL;
+	char count[8];
+	memset(count, 0, sizeof(count));
+	fstream = popen("cat /etc/storage/chinadns/chnroute.txt |wc -l","r");
+	if(fstream) {
+		fgets(count, sizeof(count), fstream);
+		pclose(fstream);
+	} else {
+		sprintf(count, "%d", 0);
+	}
+	if (strlen(count) > 0)
+		count[strlen(count) - 1] = 0;
+	websWrite(wp, "function chnroute_count() { return '%s';}\n", count);
+#if defined(APP_SHADOWSOCKS)
+	memset(count, 0, sizeof(count));
+	fstream = popen("cat /etc/storage/gfwlist/gfwlist_list.conf |wc -l","r");
+	if(fstream) {
+		fgets(count, sizeof(count), fstream);
+		pclose(fstream);
+	} else {
+		sprintf(count, "%d", 0);
+	}
+	if (strlen(count) > 0)
+		count[strlen(count) - 1] = 0;
+	websWrite(wp, "function gfwlist_count() { return '%s';}\n", count);	
+#endif
+	return 0;
+}
+
+#endif
+
+#if defined(APP_DNSFORWARDER)
+static int dnsforwarder_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int status_code = pids("dns-forwarder");
+	websWrite(wp, "function dnsforwarder_status() { return %d;}\n", status_code);
+	return 0;
+}
+#endif
+
+#if defined (APP_KOOLPROXY)
+static int koolproxy_action_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int needed_seconds = 3;
+	char *kp_action = websGetVar(wp, "connect_action", "");
+	
+	if (!strcmp(kp_action, "resetkp")) {
+		notify_rc(RCN_RESTART_KPUPDATE);
+	}
+	websWrite(wp, "<script>restart_needed_time(%d);</script>\n", needed_seconds);
+	return 0;
+}
+
+static int koolproxy_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int kp_status_code = pids("koolproxy");
+	websWrite(wp, "function koolproxy_status() { return %d;}\n", kp_status_code);
+	return 0;
+}
+#endif
+
+#if defined (APP_ADBYBY)
+static int adbyby_action_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int needed_seconds = 3;
+	char *ad_action = websGetVar(wp, "connect_action", "");
+	
+	if (!strcmp(ad_action, "updateadb")) {
+		notify_rc(RCN_RESTART_UPDATEADB);
+	}
+	websWrite(wp, "<script>restart_needed_time(%d);</script>\n", needed_seconds);
+	return 0;
+}
+
+static int adbyby_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int ad_status_code = pids("adbyby");
+	websWrite(wp, "function adbyby_status() { return %d;}\n", ad_status_code);
+	return 0;
+}
+#endif
+
+#if defined (APP_SHADOWSOCKS)
+static int pdnsd_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int pdnsd_status_code = pids("pdnsd");
+	websWrite(wp, "function pdnsd_status() { return %d;}\n", pdnsd_status_code);
+	return 0;
+}
+#endif
+
+#if defined (APP_SMARTDNS)
+static int smartdns_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int smartdns_status_code = pids("smartdns");
+	websWrite(wp, "function smartdns_status() { return %d;}\n", smartdns_status_code);
+	return 0;
+}
+#endif
+
+#if defined (APP_CADDY)
+static int caddy_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int caddy_status_code = pids("caddy_filebrowser");
+	websWrite(wp, "function caddy_status() { return %d;}\n", caddy_status_code);
+	return 0;
+}
+#endif
+
+#if defined (APP_ZEROTIER)
+static int zerotier_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int zerotier_status_code = pids("zerotier-one");
+	websWrite(wp, "function zerotier_status() { return %d;}\n", zerotier_status_code);
+	return 0;
+}
+#endif
+
+#if defined (APP_FRP)
+static int frpc_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int frpc_status_code = pids("frpc");
+	websWrite(wp, "function frpc_status() { return %d;}\n", frpc_status_code);
+	return 0;
+}
+static int frps_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int frps_status_code = pids("frps");
+	websWrite(wp, "function frps_status() { return %d;}\n", frps_status_code);
+	return 0;
+}
+#endif
+
+/*#if defined (APP_NPC)
+static int npc_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int npc_status_code = pids("npc");
+	websWrite(wp, "function npc_status() { return %d;}\n", npc_status_code);
+	return 0;
+}
+#endif*/
+
+#if defined (APP_DDNSTO)
+static int ddnsto_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int ddnsto_status_code = pids("ddnsto");
+	websWrite(wp, "function ddnsto_status() { return %d;}\n", ddnsto_status_code);
+	return 0;
+}
+#endif
+
+#if defined (APP_NVPPROXY)
+static int nvpproxy_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int nvpproxy_status_code = pids("nvpproxy");
+	websWrite(wp, "function nvpproxy_status() { return %d;}\n", nvpproxy_status_code);
+	return 0;
+}
+#endif
+
+#if defined (APP_SHADOWSOCKS)
+static int dns2tcp_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int dns2tcp_status_code = pids("dns2tcp");
+	websWrite(wp, "function dns2tcp_status() { return %d;}\n", dns2tcp_status_code);
+	return 0;
+}
+#endif
+
+#if defined (APP_ALDRIVER)
+static int aliyundrive_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	int aliyundrive_status_code = pids("aliyundrive-webdav");
+	websWrite(wp, "function aliyundrive_status() { return %d;}\n", aliyundrive_status_code);
+	return 0;
+}
+#endif
+
+static int update_action_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	char *up_action = websGetVar(wp, "connect_action", "");
+	
+	if (!strcmp(up_action, "bigtmp")) {
+		system("mount -t tmpfs -o remount,rw,size=50M tmpfs /tmp");
+	}
+	return 0;
+}
+
 static int
 ej_detect_internet_hook(int eid, webs_t wp, int argc, char **argv)
 {
@@ -2080,40 +2543,120 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 #else
 	int found_app_sshd = 0;
 #endif
-#if defined(APP_TOR)
-	int found_app_tor = 1;
+#if defined(APP_SCUT)
+	int found_app_scutclient = 1;
 #else
-	int found_app_tor = 0;
+	int found_app_scutclient = 0;
 #endif
-#if defined(APP_PRIVOXY)
-	int found_app_privoxy = 1;
+#if defined(APP_MENTOHUST)
+	int found_app_mentohust = 1;
 #else
-	int found_app_privoxy = 0;
+	int found_app_mentohust = 0;
 #endif
-#if defined(APP_DNSCRYPT)
-	int found_app_dnscrypt = 1;
+#if defined(APP_TTYD)
+	int found_app_ttyd = 1;
 #else
-	int found_app_dnscrypt = 0;
+	int found_app_ttyd = 0;
 #endif
-#if defined(SUPPORT_WPAD)
-	int found_support_wpad = 1;
+#if defined(APP_VLMCSD)
+	int found_app_vlmcsd = 1;
 #else
-	int found_support_wpad = 0;
+	int found_app_vlmcsd = 0;
+#endif
+#if defined(APP_NAPT66)
+	int found_app_napt66 = 1;
+#else
+	int found_app_napt66 = 0;
+#endif
+#if defined(APP_SHADOWSOCKS)
+	int found_app_shadowsocks = 1;
+#else
+	int found_app_shadowsocks = 0;
+#endif
+#if defined(APP_KOOLPROXY)
+	int found_app_koolproxy = 1;
+#else
+	int found_app_koolproxy = 0;
+#endif
+#if defined(APP_ADGUARDHOME)
+	int found_app_adguardhome = 1;
+#else
+	int found_app_adguardhome = 0;
+#endif
+#if defined(APP_CADDY)
+	int found_app_caddy = 1;
+#else
+	int found_app_caddy = 0;
+#endif
+#if defined(APP_WYY)
+	int found_app_wyy = 1;
+#else
+	int found_app_wyy = 0;
+#endif
+#if defined(APP_ZEROTIER)
+	int found_app_zerotier = 1;
+#else
+	int found_app_zerotier = 0;
+#endif
+#if defined(APP_DDNSTO)
+	int found_app_ddnsto = 1;
+#else
+	int found_app_ddnsto = 0;
+#endif
+#if defined(APP_ADBYBY)
+	int found_app_adbyby = 1;
+#else
+	int found_app_adbyby = 0;
+#endif
+#if defined(APP_SMARTDNS)
+	int found_app_smartdns = 1;
+#else
+	int found_app_smartdns = 0;
+#endif
+#if defined(APP_FRP)
+	int found_app_frp = 1;
+#else
+	int found_app_frp = 0;
+#endif
+#if defined(APP_NVPPROXY)
+	int found_app_nvpproxy = 1;
+#else
+	int found_app_nvpproxy = 0;
+#endif
+/*#if defined(APP_NPC)
+	int found_app_npc = 1;
+#else
+	int found_app_npc = 0;
+#endif*/
+#if defined(APP_ALIDDNS)
+	int found_app_aliddns = 1;
+#else
+	int found_app_aliddns = 0;
+#endif
+#if defined(APP_DNSFORWARDER)
+	int found_app_dnsforwarder = 1;
+#else
+	int found_app_dnsforwarder = 0;
 #endif
 #if defined(APP_XUPNPD)
 	int found_app_xupnpd = 1;
 #else
 	int found_app_xupnpd = 0;
 #endif
-#if defined(SUPPORT_ZRAM)
-	int found_support_zram = 1;
-#else
-	int found_support_zram = 0;
-#endif
 #if defined(USE_IPV6)
 	int has_ipv6 = 1;
 #else
 	int has_ipv6 = 0;
+#endif
+#if defined(APP_WIREGUARD)
+	int found_app_wireguard = 1;
+#else
+	int found_app_wireguard = 0;
+#endif
+#if defined(APP_ALDRIVER)
+	int found_app_aldriver = 1;
+#else
+	int found_app_aldriver = 0;
 #endif
 
 #if defined(USE_HW_NAT)
@@ -2177,7 +2720,12 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 #else
 	int has_openssl_ec = 0;
 #endif
+
+#if defined (SUPPORT_DDNS_SSL)
 	int has_ddns_ssl = 1;
+#else
+	int has_ddns_ssl = 0;
+#endif
 #if defined (USE_RT3352_MII)
 	int has_inic_mii = 1;
 #else
@@ -2201,30 +2749,30 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 #else
 	int has_btn_mode = 0;
 #endif
-#if defined (USE_WID_5G) && (USE_WID_5G==7610 || USE_WID_5G==7612 || USE_WID_5G==7615) && BOARD_HAS_5G_11AC
+#if defined (USE_WID_5G) && (USE_WID_5G==7610 || USE_WID_5G==7612 || USE_WID_5G==7615 || USE_WID_5G==7915)
 	int has_5g_vht = 1;
-	int has_5g_band_steering = 1;
 #else
 	int has_5g_vht = 0;
-	int has_5g_band_steering = 0;
 #endif
-#if defined (USE_WID_5G) && USE_WID_5G==7615 && BOARD_HAS_5G_11AC
+#if defined (USE_WID_5G) && (USE_WID_5G==7615 || USE_WID_5G==7915)
 	int has_5g_mumimo = 1;
 	int has_5g_txbf = 1;
-//	int has_5g_band_steering = 1;
+	int has_5g_band_steering = 1;
+#if defined (BOARD_MT7615_DBDC) || (BOARD_MT7915_DBDC)
+	int has_5g_160mhz = 0;
+#else
 	int has_5g_160mhz = 1;
+#endif
 #else
 	int has_5g_mumimo = 0;
 	int has_5g_txbf = 0;
-//	int has_5g_band_steering = 0;
+	int has_5g_band_steering = 0;
 	int has_5g_160mhz = 0;
 #endif
-#if defined (USE_WID_2G) && USE_WID_2G==7615
-	int has_2g_band_steering = 1;
+#if defined (USE_WID_2G) && (USE_WID_2G==7615 || USE_WID_2G==7915)
 	int has_2g_turbo_qam = 1;
 	int has_2g_airtimefairness = 1;
 #else
-	int has_2g_band_steering = 0;
 	int has_2g_turbo_qam = 0;
 	int has_2g_airtimefairness = 0;
 #endif
@@ -2243,6 +2791,22 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 #else
 	int has_sfe = 0;
 #endif
+#if defined (BOARD_MT7615_DBDC) || defined (BOARD_MT7915_DBDC)
+	int has_lan_ap_isolate = 0;
+#else
+	int has_lan_ap_isolate = 1;
+#endif
+#if defined (USE_WID_5G) && (USE_WID_5G==7915)
+	int has_5g_11ax = 1;
+#else
+	int has_5g_11ax = 0;
+#endif
+#if defined (USE_WID_2G) && (USE_WID_2G==7915)
+	int has_2g_11ax = 1;
+#else
+	int has_2g_11ax = 0;
+#endif
+
 	websWrite(wp,
 		"function found_utl_hdparm() { return %d;}\n"
 		"function found_app_ovpn() { return %d;}\n"
@@ -2258,12 +2822,28 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 		"function found_srv_u2ec() { return %d;}\n"
 		"function found_srv_lprd() { return %d;}\n"
 		"function found_app_sshd() { return %d;}\n"
-		"function found_app_tor() { return %d;}\n"
-		"function found_app_privoxy() { return %d;}\n"
-		"function found_app_dnscrypt() { return %d;}\n"
-		"function found_support_wpad() { return %d;}\n"
-		"function found_support_zram() { return %d;}\n"
-		"function found_app_xupnpd() { return %d;}\n",
+		"function found_app_scutclient() { return %d;}\n"
+		"function found_app_ttyd() { return %d;}\n"
+		"function found_app_vlmcsd() { return %d;}\n"
+		"function found_app_napt66() { return %d;}\n"
+		"function found_app_dnsforwarder() { return %d;}\n"
+		"function found_app_shadowsocks() { return %d;}\n"
+		"function found_app_koolproxy() { return %d;}\n"
+		"function found_app_adguardhome() { return %d;}\n"
+		"function found_app_caddy() { return %d;}\n"
+		"function found_app_adbyby() { return %d;}\n"
+		"function found_app_smartdns() { return %d;}\n"
+		"function found_app_frp() { return %d;}\n"
+		"function found_app_nvpproxy() { return %d;}\n"
+		"function found_app_npc() { return %d;}\n"
+		"function found_app_wyy() { return %d;}\n"
+		"function found_app_zerotier() { return %d;}\n"
+		"function found_app_ddnsto() { return %d;}\n"
+		"function found_app_aldriver() { return %d;}\n"
+		"function found_app_aliddns() { return %d;}\n"
+		"function found_app_wireguard() { return %d;}\n"
+		"function found_app_xupnpd() { return %d;}\n"
+		"function found_app_mentohust() { return %d;}\n",
 		found_utl_hdparm,
 		found_app_ovpn,
 		found_app_dlna,
@@ -2278,12 +2858,28 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 		found_srv_u2ec,
 		found_srv_lprd,
 		found_app_sshd,
-		found_app_tor,
-		found_app_privoxy,
-		found_app_dnscrypt,
-		found_support_wpad,
-		found_support_zram,
-		found_app_xupnpd
+		found_app_scutclient,
+		found_app_ttyd,
+		found_app_vlmcsd,
+		found_app_napt66,
+		found_app_dnsforwarder,
+		found_app_shadowsocks,
+		found_app_koolproxy,
+		found_app_adguardhome,
+		found_app_caddy,
+		found_app_adbyby,
+		found_app_smartdns,
+		found_app_frp,
+		found_app_nvpproxy,
+		0,
+		found_app_wyy,
+		found_app_zerotier,
+		found_app_ddnsto,
+		found_app_aldriver,
+		found_app_aliddns,
+		found_app_wireguard,
+		found_app_xupnpd,
+		found_app_mentohust
 	);
 
 	websWrite(wp,
@@ -2316,14 +2912,16 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 		"function support_5g_stream_rx() { return %d;}\n"
 		"function support_2g_stream_tx() { return %d;}\n"
 		"function support_2g_stream_rx() { return %d;}\n"
-		"function support_2g_band_steering() { return %d;}\n"
 		"function support_2g_turbo_qam() { return %d;}\n"
 		"function support_2g_airtimefairness() { return %d;}\n"
 		"function support_5g_txbf() { return %d;}\n"
 		"function support_5g_band_steering() { return %d;}\n"
 		"function support_5g_mumimo() { return %d;}\n"
+		"function support_sfe() { return %d;}\n"
+		"function support_lan_ap_isolate() { return %d;}\n"
 		"function support_5g_160mhz() { return %d;}\n"
-		"function support_sfe() { return %d;}\n",
+		"function support_5g_11ax() { return %d;}\n"
+		"function support_2g_11ax() { return %d;}\n",
 		has_ipv6,
 		has_ipv6_ppe,
 		has_ipv4_ppe,
@@ -2353,14 +2951,16 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 		BOARD_NUM_ANT_5G_RX,
 		BOARD_NUM_ANT_2G_TX,
 		BOARD_NUM_ANT_2G_RX,
-		has_2g_band_steering,
 		has_2g_turbo_qam,
 		has_2g_airtimefairness,
 		has_5g_txbf,
 		has_5g_band_steering,
 		has_5g_mumimo,
+		has_sfe,
+		has_lan_ap_isolate,
 		has_5g_160mhz,
-		has_sfe
+		has_5g_11ax,
+		has_2g_11ax
 	);
 
 	return 0;
@@ -2495,26 +3095,28 @@ static int openvpn_cli_cert_hook(int eid, webs_t wp, int argc, char **argv)
 {
 	int has_found_cert = 0;
 #if defined(APP_OPENVPN)
-	int i, i_auth, i_atls;
+	int i, i_atls, i_tcv2;
 	char key_file[64];
-	static const char *openvpn_client_keys[4] = {
+	static const char *openvpn_server_keys[6] = {
 		"ca.crt",
-		"client.crt",
-		"client.key",
-		"ta.key"
+		"dh1024.pem",
+		"server.crt",
+		"server.key",
+		"ta.key",
+		"stc2.key"
 	};
 
 	has_found_cert = 1;
 
-	i_auth = nvram_get_int("vpnc_ov_auth");
-	i_atls = nvram_get_int("vpnc_ov_atls");
+	i_atls = nvram_get_int("vpns_ov_atls");
+	i_tcv2 = nvram_get_int("vpns_ov_tcv2");
 
-	for (i=0; i<4; i++) {
-		if (i_auth == 1 && (i == 1 || i == 2))
+	for (i=0; i<6; i++) {
+		if (!i_atls && (i == 4))
 			continue;
-		if (!i_atls && (i == 3))
+		if (!i_tcv2 && (i == 5))
 			continue;
-		sprintf(key_file, "%s/%s", STORAGE_OVPNCLI_DIR, openvpn_client_keys[i]);
+		sprintf(key_file, "%s/%s", STORAGE_OVPNSVR_DIR, openvpn_server_keys[i]);
 		if (!f_exists(key_file)) {
 			has_found_cert = 0;
 			break;
@@ -3054,6 +3656,7 @@ apply_cgi(const char *url, webs_t wp)
 	{
 		doSystem("sync");
 		doSystem("echo 3 > /proc/sys/vm/drop_caches");
+		websRedirect(wp, current_url);
 		return 0;
 	}
 	else if (!strcmp(value, " RestoreNVRAM "))
@@ -3447,7 +4050,40 @@ do_uncgi_query(const char *query)
 	if (strlen(post_buf) > 0)
 		init_cgi(post_buf);
 }
+#if defined(APP_SHADOWSOCKS)
+static void do_html_post_and_get(char *url, FILE *stream, int len, char *boundary){
+	char *query = NULL;
 
+	init_cgi(NULL);
+
+	memset(post_buf, 0, sizeof(post_buf));
+	memset(post_buf_backup, 0, sizeof(post_buf));
+	memset(post_json_buf, 0, sizeof(post_json_buf));
+
+	if (fgets(post_buf, MIN(len+1, sizeof(post_buf)), stream)){
+		len -= strlen(post_buf);
+
+		while (len--)
+			(void)fgetc(stream);
+	}
+	sprintf(post_json_buf, "%s", post_buf);
+
+	query = url;
+	query = strsep(&query, "?");
+
+	if (query && strlen(query) > 0){
+		if (strlen(post_buf) > 0)
+			sprintf(post_buf_backup, "?%s&%s", post_buf, query);
+		else
+			sprintf(post_buf_backup, "?%s", query);
+		sprintf(post_buf, "%s", post_buf_backup+1);
+	}
+	else if (strlen(post_buf) > 0)
+		sprintf(post_buf_backup, "?%s", post_buf);
+	//websScan(post_buf_backup);
+	init_cgi(post_buf);
+}
+#endif
 static void
 do_html_apply_post(const char *url, FILE *stream, int clen, char *boundary)
 {
@@ -3607,12 +4243,57 @@ static char syslog_txt[] =
 "filename=syslog.txt"
 ;
 
+static char no_cache_IE7[] =
+"Cache-Control: no-cache\r\n"
+"Pragma: no-cache\r\n"
+"Expires: 0"
+;
+
 static char no_cache_IE[] =
 "X-UA-Compatible: IE=edge\r\n"
 "Cache-Control: no-store, no-cache, must-revalidate\r\n"
 "Pragma: no-cache\r\n"
 "Expires: -1"
 ;
+
+#if defined (APP_SCUT)
+static void
+do_scutclient_log_file(const char *url, FILE *stream)
+{
+	dump_file(stream, "/tmp/scutclient.log");
+	fputs("\r\n", stream); /* terminator */
+}
+
+static char scutclient_log_txt[] =
+"Content-Disposition: attachment;\r\n"
+"filename=scutclient.log"
+;
+
+#endif
+
+#if defined (APP_MENTOHUST)
+static void
+do_mentohust_log_file(const char *url, FILE *stream)
+{
+	dump_file(stream, "/tmp/mentohust.log");
+	fputs("\r\n", stream); /* terminator */
+}
+
+static char mentohust_log_txt[] =
+"Content-Disposition: attachment;\r\n"
+"filename=mentohust.log"
+;
+
+#endif
+
+#if defined (APP_KOOLPROXY)
+static void
+do_kp_crt_file(const char *url, FILE *stream)
+{
+    dump_file(stream, "/etc/storage/koolproxy/ca.crt");
+	fputs("\r\n", stream);
+}
+#endif
 
 struct mime_handler mime_handlers[] = {
 	/* cached javascript files w/o translations */
@@ -3634,6 +4315,7 @@ struct mime_handler mime_handlers[] = {
 #if defined(APP_ARIA)
 	/* cached font */
 	{ "**.woff", "application/font-woff", NULL, NULL, do_file, 0 }, // 2016.01 Volt1
+	{ "**.woff2", "application/font-woff", NULL, NULL, do_file, 0 },
 #endif
 
 	/* cached images */
@@ -3654,28 +4336,32 @@ struct mime_handler mime_handlers[] = {
 	{ "Settings_**.CFG", "application/force-download", NULL, NULL, do_nvram_file, 1 },
 	{ "Storage_**.TBZ", "application/force-download", NULL, NULL, do_storage_file, 1 },
 	{ "syslog.txt", "application/force-download", syslog_txt, NULL, do_syslog_file, 1 },
+#if defined(APP_KOOLPROXY)
+	{ "kp_ca.crt", "application/force-download", NULL, NULL, do_kp_crt_file, 1 },
+#endif
+#if defined(APP_SCUT)
+	{ "scutclient.log", "application/force-download", scutclient_log_txt, NULL, do_scutclient_log_file, 1 },
+#endif
+#if defined(APP_MENTOHUST)
+	{ "mentohust.log", "application/force-download", mentohust_log_txt, NULL, do_mentohust_log_file, 1 },
+#endif
 #if defined(APP_OPENVPN)
 	{ "client.ovpn", "application/force-download", NULL, NULL, do_export_ovpn_client, 1 },
 #endif
 
+
 	/* no-cached POST objects */
 	{ "update.cgi*", "text/javascript", no_cache_IE, do_html_apply_post, do_update_cgi, 1 },
 	{ "apply.cgi*", "text/html", no_cache_IE, do_html_apply_post, do_apply_cgi, 1 },
+#if defined(APP_SHADOWSOCKS)
+	{ "applydb.cgi*", "text/html", no_cache_IE7, do_html_post_and_get, do_applydb_cgi, 1 },
+	{ "dbconf", "text/javascript", no_cache_IE, do_html_apply_post, do_dbconf, 0 },
+#endif
 
 	{ "upgrade.cgi*",    "text/html", no_cache_IE, do_upgrade_fw_post, do_upgrade_fw_cgi, 1 },
 	{ "restore_nv.cgi*", "text/html", no_cache_IE, do_restore_nv_post, do_restore_nv_cgi, 1 },
 	{ "restore_st.cgi*", "text/html", no_cache_IE, do_restore_st_post, do_restore_st_cgi, 1 },
 
-#if defined(APP_DNSCRYPT)
-	/* DNSCrypt proxy resolvers file */
-	{ "**.csv", "text/csv", NULL, NULL, do_file, 0 }, // qwe
-#endif
-#if defined(SUPPORT_WPAD)
-	/* Support wpad.dat file */
-	{ "wpad.da", "application/x-ns-proxy-autoconfig", no_cache_IE, NULL, do_file, 0 }, // qwe
-	{ "wpad.dat", "application/x-ns-proxy-autoconfig", no_cache_IE, NULL, do_file, 0 }, // qwe
-	{ "proxy.pac", "application/x-ns-proxy-autoconfig", no_cache_IE, NULL, do_file, 0 }, // qwe
-#endif
 	{ NULL, NULL, NULL, NULL, NULL, 0 }
 };
 
@@ -3916,7 +4602,9 @@ struct ej_handler ej_handlers[] =
 	{ "get_flash_time", ej_get_flash_time},
 	{ "get_static_client", ej_get_static_client},
 	{ "get_static_ccount", ej_get_static_ccount},
+#ifndef WEBUI_HIDE_VPN
 	{ "get_vpns_client", ej_get_vpns_client},
+#endif
 	{ "wl_auth_list", ej_wl_auth_list},
 #if BOARD_HAS_5G_RADIO
 	{ "wl_scan_5g", ej_wl_scan_5g},
@@ -3952,9 +4640,61 @@ struct ej_handler ej_handlers[] =
 	{ "modify_sharedfolder", ej_modify_sharedfolder},
 	{ "set_share_mode", ej_set_share_mode},
 #endif
+#if defined (APP_SCUT)
+	{ "scutclient_action", scutclient_action_hook},
+	{ "scutclient_status", scutclient_status_hook},
+	{ "scutclient_version", scutclient_version_hook},
+#endif
+#if defined (APP_MENTOHUST)
+	{ "mentohust_action", mentohust_action_hook},
+	{ "mentohust_status", mentohust_status_hook},
+#endif
+#if defined (APP_SHADOWSOCKS)
+	{ "shadowsocks_action", shadowsocks_action_hook},
+	{ "shadowsocks_status", shadowsocks_status_hook},
+	{ "rules_count", rules_count_hook},
+	{ "pdnsd_status", pdnsd_status_hook},
+	{ "dns2tcp_status", dns2tcp_status_hook},
+#endif
+#if defined (APP_KOOLPROXY)
+	{ "koolproxy_action", koolproxy_action_hook},
+	{ "koolproxy_status", koolproxy_status_hook},
+#endif
+#if defined(APP_DNSFORWARDER)
+	{ "dnsforwarder_status", dnsforwarder_status_hook},
+#endif
+#if defined(APP_CADDY)
+	{ "caddy_status", caddy_status_hook},
+#endif
+#if defined (APP_ADBYBY)
+	{ "adbyby_action", adbyby_action_hook},
+	{ "adbyby_status", adbyby_status_hook},
+#endif
+#if defined (APP_SMARTDNS)
+	{ "smartdns_status", smartdns_status_hook},
+#endif
+#if defined (APP_FRP)
+	{ "frpc_status", frpc_status_hook},
+	{ "frps_status", frps_status_hook},
+#endif
+#if defined (APP_NVPPROXY)
+	{ "nvpproxy_status", nvpproxy_status_hook},
+#endif
+/*#if defined (APP_NPC)
+	{ "npc_status", npc_status_hook},
+#endif*/
+#if defined (APP_ZEROTIER)
+	{ "zerotier_status", zerotier_status_hook},
+#endif
+#if defined (APP_DDNSTO)
+	{ "ddnsto_status", ddnsto_status_hook},
+#endif
+#if defined (APP_ALDRIVER)
+	{ "aliyundrive_status", aliyundrive_status_hook},
+#endif
+	{ "update_action", update_action_hook},
 	{ "openssl_util_hook", openssl_util_hook},
 	{ "openvpn_srv_cert_hook", openvpn_srv_cert_hook},
 	{ "openvpn_cli_cert_hook", openvpn_cli_cert_hook},
 	{ NULL, NULL }
 };
-

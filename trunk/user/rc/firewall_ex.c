@@ -1708,6 +1708,15 @@ ip6t_mangle_rules(char *man_if)
 	if (is_module_loaded("ip6table_mangle"))
 		doSystem("ip6tables-restore %s", ipt_file);
 }
+
+#if defined (APP_NAPT66)
+static void
+ip6t_disable_filter(void)
+{
+	doSystem("ip6tables -P FORWARD ACCEPT");
+	doSystem("ip6tables -F FORWARD");
+}
+#endif
 #endif
 
 static int
@@ -1734,10 +1743,6 @@ ipt_nat_rules(char *man_if, char *man_ip,
 	i_vpns_type = nvram_get_int("vpns_type");
 	i_vpnc_type = nvram_get_int("vpnc_type");
 	i_vpnc_sfw = nvram_get_int("vpnc_sfw");
-
-#if defined (APP_DNSCRYPT)
-	int is_dnscrypt_enabled = nvram_match("dnscrypt_enable", "1");
-#endif
 
 	vpnc_if = NULL;
 	if (i_vpnc_enable) {
@@ -1790,14 +1795,6 @@ ipt_nat_rules(char *man_if, char *man_ip,
 		
 		snprintf(dmz_ip, sizeof(dmz_ip), "%s", nvram_safe_get("dmz_ip"));
 		is_use_dmz = (is_valid_ipv4(dmz_ip)) ? 1 : 0;
-
-#if defined (APP_DNSCRYPT)
-		/* redirect all LAN clients' DNS queries to dnscrypt if WAN and dnscrypt-proxy are up (PREROUTING) */
-		if (wan_ip && is_dnscrypt_enabled && nvram_match("dnscrypt_force_dns", "1")) {
-			fprintf(fp, "-I %s -i %s -p tcp --dport 53 -j DNAT --to-destination %s\n", "PREROUTING", lan_if, lan_ip);
-			fprintf(fp, "-I %s -i %s -p udp --dport 53 -j DNAT --to-destination %s\n", "PREROUTING", lan_if, lan_ip);
-		}
-#endif
 		
 		/* BattleNET (PREROUTING + POSTROUTING) */
 		if (wan_ip && nvram_match("sp_battle_ips", "1")) {
@@ -2123,6 +2120,9 @@ start_firewall_ex(void)
 	char wan_ip[16], man_ip[16], lan_ip[16], lan_net[24] = {0};
 	const char *opt_iptables_script = "/opt/bin/update_iptables.sh";
 	const char *int_iptables_script = SCRIPT_POST_FIREWALL;
+#if defined (APP_SHADOWSOCKS)
+	const char *shadowsocks_iptables_script = "/tmp/shadowsocks_iptables.save";
+#endif
 
 	unit = 0;
 
@@ -2187,8 +2187,16 @@ start_firewall_ex(void)
 
 	/* IPv6 Filter rules */
 	ip6t_filter_rules(man_if, wan_if, lan_if, logaccept, logdrop, i_tcp_mss);
+#if defined (APP_NAPT66)
+	if (nvram_match("napt66_enable", "1"))
+		ip6t_disable_filter();
+#endif
 #endif
 
+#if defined (APP_SHADOWSOCKS)
+	if (check_if_file_exist(shadowsocks_iptables_script))
+		doSystem("sh %s", shadowsocks_iptables_script);
+#endif
 	if (check_if_file_exist(int_iptables_script))
 		doSystem("%s", int_iptables_script);
 
@@ -2205,5 +2213,4 @@ start_firewall_ex(void)
 	module_smart_unload("iptable_mangle", 0);
 	module_smart_unload("ip6table_mangle", 0);
 }
-
 

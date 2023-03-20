@@ -38,6 +38,11 @@ function initial(){
 	show_menu(5,1,1);
 	show_footer();
 
+	if (!support_2g_11ax()){
+		var o1 = document.form.rt_gmode;
+		o1.remove(0);
+	}
+
 	document.form.rt_radio_date_x_Sun.checked = getDateCheck(document.form.rt_radio_date_x.value, 0);
 	document.form.rt_radio_date_x_Mon.checked = getDateCheck(document.form.rt_radio_date_x.value, 1);
 	document.form.rt_radio_date_x_Tue.checked = getDateCheck(document.form.rt_radio_date_x.value, 2);
@@ -184,6 +189,9 @@ function validForm(){
         }
     }
 
+	if(!validate_string_ssid(document.form.rt_ssid))
+		return false;
+
 	if(document.form.rt_ssid.value == "")
 		document.form.rt_ssid.value = "ASUS";
 
@@ -269,7 +277,7 @@ function validate_wlphrase(s, v, obj){
     <input type="hidden" name="rt_radio_date_x" value="<% nvram_get_x("","rt_radio_date_x"); %>">
     <input type="hidden" name="rt_radio_time_x" value="<% nvram_get_x("","rt_radio_time_x"); %>">
     <input type="hidden" name="rt_radio_time2_x" value="<% nvram_get_x("","rt_radio_time2_x"); %>">
-    <input type="hidden" name="rt_ssid2" value="<% nvram_get_x("",  "rt_ssid"); %>">
+    <input type="hidden" name="rt_ssid2" value="<% nvram_char_to_ascii("",  "rt_ssid"); %>">
     <input type="hidden" name="rt_wpa_mode" value="<% nvram_get_x("","rt_wpa_mode"); %>">
     <input type="hidden" name="rt_wpa_psk_org" value="<% nvram_char_to_ascii("", "rt_wpa_psk"); %>">
     <input type="hidden" name="rt_key1_org" value="<% nvram_char_to_ascii("", "rt_key1"); %>">
@@ -364,7 +372,7 @@ function validate_wlphrase(s, v, obj){
                                         </tr>
                                         <tr>
                                             <th width="50%"><a class="help_tooltip" href="javascript: void(0)" onmouseover="openTooltip(this, 0, 1);"><#WLANConfig11b_SSID_itemname#></a></th>
-                                            <td><input type="text" maxlength="32" class="input" size="32" name="rt_ssid" value=""></td>
+                                            <td><input type="text" maxlength="32" class="input" size="32" name="rt_ssid" value="" onkeypress="return is_string(this,event);"></td>
                                         </tr>
                                         <tr>
                                             <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 0, 2);"><#WLANConfig11b_x_BlockBCSSID_itemname#></a></th>
@@ -384,10 +392,11 @@ function validate_wlphrase(s, v, obj){
                                             <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 0, 4);"><#WLANConfig11b_x_Mode11g_itemname#></a></th>
                                             <td>
                                                 <select name="rt_gmode" class="input" onChange="return change_common_rt(this, 'WLANConfig11b', 'rt_gmode')">
+                                                    <option value="6" <% nvram_match_x("","rt_gmode", "6","selected"); %>>b/g/n/ax Mixed</option>
                                                     <option value="2" <% nvram_match_x("","rt_gmode", "2","selected"); %>>b/g/n Mixed</option>
                                                     <option value="1" <% nvram_match_x("","rt_gmode", "1","selected"); %>>b/g Mixed</option>
-                                                    <option value="5" <% nvram_match_x("","rt_gmode", "5","selected"); %>>g/n Mixed</option>
-                                                    <option value="3" <% nvram_match_x("","rt_gmode", "3","selected"); %>>n Only (*)</option>
+                                                    <option value="5" <% nvram_match_x("","rt_gmode", "5","selected"); %>>g/n Mixed (*)</option>
+                                                    <option value="3" <% nvram_match_x("","rt_gmode", "3","selected"); %>>n Only</option>
                                                     <option value="4" <% nvram_match_x("","rt_gmode", "4","selected"); %>>g Only</option>
                                                     <option value="0" <% nvram_match_x("","rt_gmode", "0","selected"); %>>b Only</option>
                                                 </select>
@@ -409,7 +418,7 @@ function validate_wlphrase(s, v, obj){
                                             <td>
                                                 <select name="rt_HT_BW" class="input" onChange="return change_common_rt(this, 'WLANConfig11b', 'rt_HT_BW')">
                                                     <option value="0" <% nvram_match_x("","rt_HT_BW", "0","selected"); %>>20 MHz</option>
-                                                    <option value="1" <% nvram_match_x("","rt_HT_BW", "1","selected"); %>>20/40 MHz (*)</option>
+                                                    <option value="1" <% nvram_match_x("","rt_HT_BW", "1","selected"); %>>20/40 MHz</option>
                                                 </select>
                                             </td>
                                         </tr>
@@ -563,8 +572,6 @@ function validate_wlphrase(s, v, obj){
                                                     <option value="JP" <% nvram_match_x("", "rt_country_code", "JP","selected"); %>>Japan (channels 1-13)</option>
                                                     <option value="AU" <% nvram_match_x("", "rt_country_code", "AU","selected"); %>>Australia (channels 1-13)</option>
                                                     <option value="GB" <% nvram_match_x("", "rt_country_code", "GB","selected"); %>>Europe (channels 1-13)</option>
-                                                    <option value="BY" <% nvram_match_x("", "rt_country_code", "BY","selected"); %>>Belarus (channels 1-13)</option>
-                                                    <option value="UA" <% nvram_match_x("", "rt_country_code", "UA","selected"); %>>Ukraine (channels 1-13)</option>
                                                     <option value="RU" <% nvram_match_x("", "rt_country_code", "RU","selected"); %>>Russia (channels 1-13)</option>
                                                     <option value="DB" <% nvram_match_x("", "rt_country_code", "DB","selected"); %>>Debug (all channels)</option>
                                                 </select>

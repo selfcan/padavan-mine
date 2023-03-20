@@ -3,8 +3,7 @@ SRC_URL = ftp://ftp.infradead.org/pub/mtd-utils/$(SRC_NAME).tar.bz2
 
 THISDIR = $(shell pwd)
 
-#all: download_test extract_test config_test
-all: config_test
+all: download_test extract_test config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 download_test:
@@ -44,7 +43,9 @@ configure:
 	)
 
 clean:
-	$(MAKE) -C $(SRC_NAME) clean
+	if [ -f $(SRC_NAME)/Makefile ] ; then \
+		$(MAKE) -C $(SRC_NAME) distclean ; \
+	fi ; \
 	rm -f config_done
 
 romfs:

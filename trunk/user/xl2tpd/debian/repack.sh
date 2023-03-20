@@ -28,7 +28,6 @@ UP_DIR=`ls -1 $DIR`
 
     cd $DIR
 
-    rm -v $UP_DIR/doc/rfc2661.txt
     rm -rv $UP_DIR/debian/
 
     REPACK_DIR="$PKG-$VER.orig"

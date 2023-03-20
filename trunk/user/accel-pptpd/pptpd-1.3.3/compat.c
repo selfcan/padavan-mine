@@ -12,10 +12,10 @@
 
 #include "compat.h"
 
+#ifndef HAVE_STRLCPY
 #include <string.h>
 #include <stdio.h>
 
-#ifndef HAVE_STRLCPY
 void strlcpy(char *dst, const char *src, size_t size)
 {
 	strncpy(dst, src, size - 1);

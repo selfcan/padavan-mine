@@ -65,8 +65,6 @@
 #define VPN_CLIENT_PPPD_OPTIONS		"/tmp/ppp/options.vpnc"
 #define VPN_CLIENT_UPDOWN_SCRIPT	"/etc/storage/vpnc_server_script.sh"
 
-#define WPAD_DAT_SCRIPT				"/etc/storage/wpad.dat"
-
 #define IPT_CHAIN_NAME_VPN_LIST		"vpnlist"
 #define IPT_CHAIN_NAME_MAC_LIST		"maclist"
 #define IPT_CHAIN_NAME_URL_LIST		"urllist"
@@ -515,30 +513,114 @@ int start_services_once(int is_ap_mode);
 void stop_services(int stopall);
 void stop_services_lan_wan(void);
 void stop_misc(void);
-
-#if defined(SUPPORT_ZRAM)
-int get_zram_disksize(void);
-void stop_zram(void);
-void start_zram(void);
-void restart_zram(void);
+#if defined(APP_SCUT)
+int is_scutclient_run(void);
+void stop_scutclient(void);
+void start_scutclient(void);
+void restart_scutclient(void);
 #endif
-#if defined(APP_TOR)
-int is_tor_run(void);
-void stop_tor(void);
-void start_tor(void);
-void restart_tor(void);
+#if defined(APP_MENTOHUST)
+int is_mentohust_run(void);
+void stop_mentohust(void);
+void start_mentohust(void);
+void restart_mentohust(void);
 #endif
-#if defined(APP_PRIVOXY)
-int is_privoxy_run(void);
-void stop_privoxy(void);
-void start_privoxy(void);
-void restart_privoxy(void);
+#if defined(APP_TTYD)
+void stop_ttyd(void);
+void start_ttyd(void);
+void restart_ttyd(void);
 #endif
-#if defined(APP_DNSCRYPT)
-int is_dnscrypt_run(void);
-void stop_dnscrypt(void);
-void start_dnscrypt(void);
-void restart_dnscrypt(void);
+#if defined(APP_SHADOWSOCKS)
+void stop_ss(void);
+void start_ss(void);
+void restart_ss(void);
+void stop_ss_tunnel(void);
+void start_ss_tunnel(void);
+void restart_ss_tunnel(void);
+void update_chnroute(void);
+void update_gfwlist(void);
+void update_dlink(void);
+void reset_dlink(void);
+#endif
+#if defined(APP_VLMCSD)
+void stop_vlmcsd(void);
+void start_vlmcsd(void);
+void restart_vlmcsd(void);
+#endif
+#if defined(APP_NAPT66)
+void start_napt66(void);
+#endif
+#if defined(APP_KOOLPROXY)
+void stop_koolproxy(void);
+void start_koolproxy(void);
+void restart_koolproxy(void);
+void update_kp(void);
+#endif
+#if defined(APP_ADGUARDHOME)
+void stop_adguardhome(void);
+void start_adguardhome(void);
+void restart_adguardhome(void);
+#endif
+#if defined(APP_ADBYBY)
+void stop_adbyby(void);
+void start_adbyby(void);
+void restart_adbyby(void);
+void update_adb(void);
+#endif
+#if defined(APP_ALIDDNS)
+void stop_aliddns(void);
+void start_aliddns(void);
+void restart_aliddns(void);
+#endif
+#if defined(APP_FRP)
+void stop_frp(void);
+void start_frp(void);
+void restart_frp(void);
+#endif
+/*#if defined(APP_NPC)
+void stop_npc(void);
+void start_npc(void);
+void restart_npc(void);
+#endif*/
+#if defined(APP_DDNSTO)
+void stop_ddnsto(void);
+void start_ddnsto(void);
+void restart_ddnsto(void);
+#endif
+#if defined(APP_CADDY)
+void stop_caddy(void);
+void start_caddy(void);
+void restart_caddy(void);
+#endif
+#if defined(APP_WYY)
+void stop_wyy(void);
+void start_wyy(void);
+void restart_wyy(void);
+#endif
+#if defined(APP_ZEROTIER)
+void stop_zerotier(void);
+void start_zerotier(void);
+void restart_zerotier(void);
+#endif
+#if defined(APP_DNSFORWARDER)
+void stop_dnsforwarder(void);
+void start_dnsforwarder(void);
+void restart_dnsforwarder(void);
+#endif
+#if defined(APP_NVPPROXY)
+void stop_nvpproxy(void);
+void start_nvpproxy(void);
+void restart_nvpproxy(void);
+#endif
+#if defined(APP_WIREGUARD)
+void stop_wireguard(void);
+void start_wireguard(void);
+void restart_wireguard(void);
+#endif
+#if defined(APP_ALDRIVER)
+void stop_aldriver(void);
+void start_aldriver(void);
+void restart_aldriver(void);
 #endif
 
 /* services_ex.c */

@@ -42,16 +42,12 @@ int init_config ()
 
     gconfig.port = UDP_LISTEN_PORT;
     gconfig.sarefnum = IP_IPSEC_REFINFO; /* default use the latest we know */
-    gconfig.ipsecsaref = 0; /* default off - requires patched KLIPS kernel module */
-    gconfig.forceuserspace = 0; /* default off - allow kernel decap of data packets */
     gconfig.listenaddr = htonl(INADDR_ANY); /* Default is to bind (listen) to all interfaces */
     gconfig.debug_avp = 0;
     gconfig.debug_network = 0;
     gconfig.packet_dump = 0;
     gconfig.debug_tunnel = 0;
     gconfig.debug_state = 0;
-    gconfig.max_retries = DEFAULT_MAX_RETRIES;
-    gconfig.cap_backoff = 0;
     lnslist = NULL;
     laclist = NULL;
     deflac = (struct lac *) calloc (1, sizeof (struct lac));
@@ -219,7 +215,6 @@ int set_int (char *word, char *value, int *ptr)
 
 int set_string (char *word, char *value, char *ptr, int len)
 {
-    UNUSED(word);
 #ifdef DEBUG_FILE
     l2tp_log (LOG_DEBUG, "set_%s: %s  flag to '%s'\n", word, word, value);
 #endif /* ; */
@@ -233,7 +228,7 @@ int set_port (char *word, char *value, int context, void *item)
     {
     case CONTEXT_GLOBAL:
 #ifdef DEBUG_FILE
-        l2tp_log (LOG_DEBUG, "set_maxretries: Setting global max retries to %s\n",
+        l2tp_log (LOG_DEBUG, "set_port: Setting global port number to %s\n",
              value);
 #endif
         set_int (word, value, &(((struct global *) item)->port));
@@ -357,46 +352,6 @@ int set_speed (char *word, char *value, int context, void *item)
     return 0;
 }
 
-int set_maxretries (char *word, char *value, int context, void *item)
-{
-    switch (context & ~CONTEXT_DEFAULT)
-    {
-    case CONTEXT_GLOBAL:
-#ifdef DEBUG_FILE
-        l2tp_log (LOG_DEBUG, "set_port: Setting global max retries to %s\n",
-             value);
-#endif
-        set_int (word, value, &(((struct global *) item)->max_retries));
-        break;
-    default:
-        snprintf (filerr, sizeof (filerr), "'%s' not valid in this context\n",
-                  word);
-        return -1;
-    }
-    return 0;
-
-}
-
-int set_capbackoff (char *word, char *value, int context, void *item)
-{
-    switch (context & ~CONTEXT_DEFAULT)
-    {
-    case CONTEXT_GLOBAL:
-#ifdef DEBUG_FILE
-        l2tp_log (LOG_DEBUG, "set_capbackoff: Setting global cap backoff to %s\n",
-             value);
-#endif
-        set_int (word, value, &(((struct global *) item)->cap_backoff));
-        break;
-    default:
-        snprintf (filerr, sizeof (filerr), "'%s' not valid in this context\n",
-                  word);
-        return -1;
-    }
-    return 0;
-
-}
-
 int set_rmax (char *word, char *value, int context, void *item)
 {
     if (atoi (value) < 1)
@@ -464,7 +419,7 @@ int set_autodial (char *word, char *value, int context, void *item)
 
 int set_flow (char *word, char *value, int context, void *item)
 {
-    int v = -1;
+    int v;
     set_boolean (word, value, &v);
     if (v < 0)
         return -1;
@@ -973,7 +928,7 @@ struct iprange *set_range (char *word, char *value, struct iprange *in)
 				}
 			}
 			/* Copy the last field + null terminator */
-			if ((size_t)(ip_hi + sizeof(ip_hi)-e) > strlen(d)) {
+			if (ip_hi + sizeof(ip_hi)-e > strlen(d)) {
 				strcpy(e, d);
 				d = ip_hi;
 			}
@@ -1048,7 +1003,7 @@ int set_localiprange (char *word, char *value, int context, void *item)
 
     if (lns->localaddr) {
         snprintf (filerr, sizeof (filerr), "'local ip range' and 'local ip' are mutually exclusive\n");
-	return -1;
+        return -1;
     }
 
     lns->localrange = set_range (word, value, lns->localrange);
@@ -1101,7 +1056,6 @@ int set_exclusive (char *word, char *value, int context, void *item)
 
 int set_ip (char *word, char *value, unsigned int *addr)
 {
-    UNUSED(word);
     struct hostent *hp;
     hp = gethostbyname (value);
     if (!hp)
@@ -1288,7 +1242,6 @@ int set_rand_dev ()
 
 int set_rand_egd (char *value)
 {
-    UNUSED(value);
     l2tp_log(LOG_WARNING, "%s: not yet implemented!\n", __FUNCTION__);
     rand_source = RAND_EGD;
     return -1;
@@ -1296,7 +1249,6 @@ int set_rand_egd (char *value)
 
 int set_rand_source (char *word, char *value, int context, void *item)
 {
-    UNUSED(item);
     time_t seconds;
     /*
      * We're going to go ahead and seed the rand() function with srand()
@@ -1354,7 +1306,7 @@ int parse_config (FILE * f)
     /* Read in the configuration file handed to us */
     /* FIXME: I should check for incompatible options */
     int context = 0;
-    char buf[1024]; 
+    char buf[1024];
     char *s, *d, *t;
     int linenum = 0;
     int def = 0;
@@ -1559,7 +1511,7 @@ int parse_config (FILE * f)
                 l2tp_log (LOG_CRIT, "parse_config: line %d: Unknown field '%s'\n",
                      linenum, s);
                 return -1;
-            }            
+            }
         }
     }
     return 0;
@@ -1641,7 +1593,5 @@ struct keyword words[] = {
     {"tx bps", &set_speed},
     {"rx bps", &set_speed},
     {"bps", &set_speed},
-    {"max retries" , &set_maxretries},
-    {"cap backoff" , &set_capbackoff},
     {NULL, NULL}
 };

@@ -1,3 +1,5 @@
+THISDIR = $(shell pwd)
+go_version = 1.20.1
 # use host target
 CC        = gcc
 GCC       = gcc
@@ -17,7 +19,7 @@ LDFLAGS   =
 
 -include $(LINUX_CONFIG)
 
-all:
+all:go_build
 	make -C mkimage
 	mkdir -p sstrip
 	make -C $(SSTRIP_NAME)
@@ -25,6 +27,15 @@ all:
 ifeq ($(CONFIG_RT2880_ROOTFS_IN_FLASH),y)
 	make -C mksquashfs_xz
 endif
+
+go_build:
+	mkdir -p $(THISDIR)/go
+	( if [ ! -f $(THISDIR)/go/go$(go_version).linux-amd64.tar.gz ]; then \
+	curl --create-dirs -L https://go.dev/dl/go$(go_version).linux-amd64.tar.gz -o $(THISDIR)/go/go$(go_version).linux-amd64.tar.gz ; \
+	fi )
+	( if [ ! -d $(THISDIR)/go/go ]; then \
+	tar zxfv $(THISDIR)/go/go$(go_version).linux-amd64.tar.gz -C go ; \
+	fi )
 
 clean:
 	if [ -f $(SSTRIP_NAME)/Makefile ] ; then \
@@ -34,3 +45,4 @@ clean:
 	make -C mkimage clean
 	make -C lzma clean
 	make -C mksquashfs_xz clean
+	rm -rf $(THISDIR)/go/go

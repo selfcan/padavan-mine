@@ -45,7 +45,7 @@
 #include "httpd.h"
 #include "common.h"
 
-#define LOGIN_TIMEOUT		60
+#define LOGIN_TIMEOUT		30
 #define SERVER_NAME		"httpd"
 #define SERVER_PORT		80
 #define SERVER_PORT_SSL		443
@@ -873,7 +873,7 @@ handle_request(FILE *conn_fp, const conn_item_t *item)
 		if ( strcmp( cur, "\n" ) == 0 || strcmp( cur, "\r\n" ) == 0 ) {
 			break;
 		}
-
+		
 		if (strncasecmp(cur, "Accept-Language:", 16) == 0) {
 			if (!http_has_lang)
 				http_has_lang = set_preferred_lang(cur + 16);
@@ -888,6 +888,10 @@ handle_request(FILE *conn_fp, const conn_item_t *item)
 			cp = cur + 15;
 			cp += strspn( cp, " \t" );
 			clen = strtoul( cp, NULL, 0 );
+			if ((clen < 0) || (clen > 50000000)) {
+				send_error( 400, "Bad Request", NULL, "Content length invalid.", conn_fp);
+				return;
+			}
 		}
 		else if (strncasecmp( cur, "If-Modified-Since:", 18) == 0) {
 			cp = cur + 18;
@@ -900,11 +904,6 @@ handle_request(FILE *conn_fp, const conn_item_t *item)
 			*cp = '\0';
 			cur = ++cp;
 		}
-	}
-
-	if (clen < 0 || clen > 50000000) {
-		send_error( 400, "Bad Request", NULL, "Content length invalid.", conn_fp);
-		return;
 	}
 
 	if (strcasecmp(method, "get") == 0)
@@ -950,12 +949,14 @@ handle_request(FILE *conn_fp, const conn_item_t *item)
 	usockaddr_to_uaddr(&item->usa, &conn_ip);
 
 	login_state = http_login_check(&conn_ip);
+	
 	if (login_state == 0) {
 		if (strstr(file, ".htm") != NULL || strstr(file, ".asp") != NULL) {
 			file = "Nologin.asp";
 			query = NULL;
 		}
 	}
+	
 
 	/* special case for reset browser credentials */
 	if (strcmp(file, "logout") == 0) {
@@ -987,7 +988,7 @@ handle_request(FILE *conn_fp, const conn_item_t *item)
 			send_authenticate(conn_fp);
 			return;
 		}
-
+		
 		if (login_state == 2)
 			http_login(&conn_ip);
 	}

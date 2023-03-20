@@ -313,7 +313,7 @@ function change_wan_type(wan_type, flag){
 	showhide_div("row_dhcp_toggle", is_pppoe||is_pptp||is_l2tp);
 	showhide_div("row_dns_toggle", !is_static);
 	showhide_div("tbl_vpn_control", is_pppoe||is_pptp||is_l2tp);
-	showhide_div("row_auth_type", is_static||is_dhcp||is_pptp);
+	showhide_div("row_auth_type", is_static||is_dhcp);
 
 	if(is_pppoe||is_pptp||is_l2tp){
 		$("dhcp_sect_desc").innerHTML = "<#WAN_MAN_desc#>";
@@ -578,9 +578,8 @@ function AuthSelection(auth){
 	var wan_type = document.form.wan_proto.value;
 
 	if(wan_type == "pppoe" || wan_type == "pptp" || wan_type == "l2tp"){
-		var show = (wan_type == "pptp") ? 1 : 0;
-		showhide_div("row_auth_user", show);
-		showhide_div("row_auth_pass", show);
+		showhide_div("row_auth_user", 0);
+		showhide_div("row_auth_pass", 0);
 		showhide_div("row_auth_host", 0);
 		return 0;
 	}
@@ -726,9 +725,9 @@ function simplyMAC(fullMAC){
                                             <th><#WAN_SFE#></a></th>
                                             <td>
                                                 <select name="sfe_enable" class="input">
-                                                    <option value="1" <% nvram_match_x("", "sfe_enable", "1", "selected"); %>>Offload TCP/UDP for LAN</option>
-                                                    <option value="2" <% nvram_match_x("", "sfe_enable", "2", "selected"); %>>Offload TCP/UDP for LAN/WLAN</option>
-                                                    <option value="0" <% nvram_match_x("", "sfe_enable", "0", "selected"); %>>Disable (Slow)</option>
+                                                    <option value="0" <% nvram_match_x("", "sfe_enable", "0", "selected"); %>>Disable</option>
+                                                    <option value="1" <% nvram_match_x("", "sfe_enable", "1", "selected"); %>>Enable for IPv4/IPv6</option>
+                                                    <option value="2" <% nvram_match_x("", "sfe_enable", "2", "selected"); %>>Enable for IPv4/IPv6 and WiFi</option>
                                                 </select>
                                             </td>
                                         </tr>
@@ -751,7 +750,7 @@ function simplyMAC(fullMAC){
 
                                     <table width="100%" align="center" cellpadding="4" cellspacing="0" class="table" id="tbl_dhcp_sect">
                                         <tr>
-                                            <th id="dhcp_sect_desc" colspan="2" style="background-color: #E3E3E3;"><#IPConnection_ExternalIPAddress_sectionname#></th>
+                                            <th id="dhcp_sect_desc" colspan="2" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#IPConnection_ExternalIPAddress_sectionname#></th>
                                         </tr>
                                         <tr id="row_dhcp_toggle">
                                             <th id="dhcp_auto_desc" width="50%"><#Layer3Forwarding_x_DHCPClient_itemname#></th>
@@ -791,7 +790,7 @@ function simplyMAC(fullMAC){
 
                                     <table width="100%" align="center" cellpadding="4" cellspacing="0" class="table">
                                         <tr>
-                                            <th colspan="2" style="background-color: #E3E3E3;"><#IPConnection_x_DNSServerEnable_sectionname#></th>
+                                            <th colspan="2" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#IPConnection_x_DNSServerEnable_sectionname#></th>
                                         </tr>
                                         <tr id="row_dns_toggle">
                                             <th width="50%"><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this,7,12);"><#IPConnection_x_DNSServerEnable_itemname#></a></th>
@@ -830,7 +829,7 @@ function simplyMAC(fullMAC){
 
                                     <table width="100%" align="center" cellpadding="4" cellspacing="0" class="table" id="tbl_vpn_control">
                                         <tr>
-                                            <th colspan="2" style="background-color: #E3E3E3;"><#PPPConnection_UserName_sectionname#></th>
+                                            <th colspan="2" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#PPPConnection_UserName_sectionname#></th>
                                         </tr>
                                         <tr id="row_l2tp_cli" style="display:none">
                                             <th><#PPP_L2TPD#></th>
@@ -969,7 +968,7 @@ function simplyMAC(fullMAC){
 
                                     <table width="100%" cellpadding="4" cellspacing="0" class="table">
                                         <tr>
-                                            <th colspan="2" style="background-color: #E3E3E3;"><#PPPConnection_x_HostNameForISP_sectionname#></th>
+                                            <th colspan="2" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#PPPConnection_x_HostNameForISP_sectionname#></th>
                                         </tr>
                                         <tr id="row_auth_type">
                                             <th><#ISP_Authentication_mode#></th>
@@ -1014,7 +1013,7 @@ function simplyMAC(fullMAC){
                                             </td>
                                         </tr>
                                         <tr id="row_vci">
-                                            <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this,7,19);">Vendor Class Identifier:</a></th>
+                                            <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this,7,19);"><#PPPConnection_x_HostNameForISP_itemvci#></a></th>
                                             <td>
                                                 <input type="text" name="wan_vci" class="input" maxlength="128" size="32" value="<% nvram_get_x("","wan_vci"); %>" onkeypress="return is_string(this,event);"/>
                                             </td>
@@ -1050,7 +1049,7 @@ function simplyMAC(fullMAC){
 
                                     <table width="100%" align="center" cellpadding="4" cellspacing="0" class="table" id="tbl_viptv_sect" style="display:none">
                                         <tr>
-                                            <th colspan="2" style="background-color: #E3E3E3;"><#MAN_VIPTV_desc#></th>
+                                            <th colspan="2" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#MAN_VIPTV_desc#></th>
                                         </tr>
                                         <tr>
                                             <th width="50%"><#IPConnection_ExternalIPAddress_itemname#></th>
@@ -1068,7 +1067,7 @@ function simplyMAC(fullMAC){
 
                                     <table width="100%" cellpadding="4" cellspacing="0" class="table">
                                         <tr>
-                                            <th colspan="2" style="background-color: #E3E3E3;"><#WAN_Bridge#></th>
+                                            <th colspan="2" style="background-color: rgba ( 171 , 168 , 167 , 0.2 );"><#WAN_Bridge#></th>
                                         </tr>
                                         <tr>
                                             <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this,7,22);"><#Layer3Forwarding_x_STB_itemname#></a></th>

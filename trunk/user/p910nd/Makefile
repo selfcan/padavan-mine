@@ -1,7 +1,5 @@
 # If you don't have it in /var/log/subsys, uncomment and define
 #CFLAGS += -DLOCKFILE_DIR=\"/var/log\"
-CFLAGS  += -ffunction-sections -fdata-sections -fvisibility=hidden
-LDFLAGS += -Wl,--gc-sections
 
 PROG = p910nd
 CONFIG = p910nd.conf

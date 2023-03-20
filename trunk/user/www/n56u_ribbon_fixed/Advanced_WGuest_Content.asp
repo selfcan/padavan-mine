@@ -117,6 +117,9 @@ function validForm(){
 
 	var mode = document.form.wl_guest_auth_mode.value;
 
+	if(!validate_string_ssid(document.form.wl_guest_ssid))
+		return false;
+
 	if(!validate_timerange(document.form.wl_guest_time_x_starthour, 0)
 			|| !validate_timerange(document.form.wl_guest_time_x_startmin, 1)
 			|| !validate_timerange(document.form.wl_guest_time_x_endhour, 2)
@@ -174,7 +177,9 @@ function change_guest_enabled(mflag) {
 	showhide_div('row_guest_4', v);
 	showhide_div('row_guest_5', v);
 	showhide_div('row_guest_6', v);
-	showhide_div('row_guest_7', v);
+	if (support_lan_ap_isolate()) {
+		showhide_div('row_guest_7', v);
+	}
 	showhide_div('row_guest_8', v);
 	showhide_div('row_guest_9', v);
 	showhide_div('row_guest_10', v);
@@ -255,7 +260,7 @@ function change_guest_auth_mode(mflag) {
 
     <input type="hidden" name="wl_gmode" value="<% nvram_get_x("","wl_gmode"); %>" readonly="1">
     <input type="hidden" name="wl_country_code" value="<% nvram_get_x("","wl_country_code"); %>">
-    <input type="hidden" name="wl_guest_ssid_org" value="<% nvram_get_x("", "wl_guest_ssid"); %>">
+    <input type="hidden" name="wl_guest_ssid_org" value="<% nvram_char_to_ascii("", "wl_guest_ssid"); %>">
     <input type="hidden" name="wl_guest_wpa_mode" value="<% nvram_get_x("","wl_guest_wpa_mode"); %>">
     <input type="hidden" name="wl_guest_wpa_psk_org" value="<% nvram_char_to_ascii("", "wl_guest_wpa_psk"); %>">
     <input type="hidden" name="wl_guest_date_x" value="<% nvram_get_x("","wl_guest_date_x"); %>">
@@ -344,7 +349,7 @@ function change_guest_auth_mode(mflag) {
                                         </tr>
                                         <tr id="row_guest_5" style="display:none;">
                                             <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 0, 1);"><#WIFIGuestSSID#></a></th>
-                                            <td><input type="text" maxlength="32" class="input" size="32" name="wl_guest_ssid" value=""/></td>
+                                            <td><input type="text" maxlength="32" class="input" size="32" name="wl_guest_ssid" value="" onkeypress="return is_string(this,event);"/></td>
                                         </tr>
                                         <tr id="row_guest_6" style="display:none;">
                                             <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 0, 2);"><#WLANConfig11b_x_BlockBCSSID_itemname#></a></th>

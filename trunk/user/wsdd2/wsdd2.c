@@ -324,12 +324,14 @@ static int open_ep(struct endpoint **epp, struct service *sv,
 				return -1;
 			}
 			ep->mreq.ip_mreq.imr_multiaddr = ep->mcast.in.sin_addr;
-#ifdef USE_ip_mreq
-			ep->mreq.ip_mreq.imr_interface = ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
-
+#if 0
+			ep->mreq.ip_mreq.imr_address	=
+				((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+			ep->mreq.ip_mreq.imr_ifindex =
+				if_nametoindex(ep->ifname);
 #else
-			ep->mreq.ip_mreq.imr_address = ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
-			ep->mreq.ip_mreq.imr_ifindex = if_nametoindex(ep->ifname);
+			ep->mreq.ip_mreq.imr_interface =
+				((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
 #endif
 		}
 
@@ -423,16 +425,6 @@ static int open_ep(struct endpoint **epp, struct service *sv,
 			close(ep->sock);
 			return -1;
 		}
-#ifdef IP_MULTICAST_IF
-		/* Set multicast sending interface to avoid error: wsdd-mcast-v4: wsd_send_soap_msg: send: No route to host */
-		if ((ep->family == AF_INET) &&
-			setsockopt(ep->sock, sp->ipproto_ip, IP_MULTICAST_IF, &ep->mreq, ep->mreqlen)) {
-			ep->errstr = __FUNCTION__ ": IP_MULTICAST_IF";
-			ep->_errno = errno;
-			close(ep->sock);
-			return -1;
-		}
-#endif
 		/* Disable loopback. */
 		if (setsockopt(ep->sock, sp->ipproto_ip, sp->ip_multicast_loop,
 				&disable, sizeof disable)) {
@@ -711,15 +703,15 @@ again:
 
 	struct ifaddrs *ifaddrs;
 	fd_set fds;
-	int rv = 0, nfds = -1;
+	int svn, rv = 0, nfds = -1;
 	struct endpoint *ep, *badep = NULL;
 
 	FD_ZERO(&fds);
 
-	if (getifaddrs(&ifaddrs) !=0)
+	if (getifaddrs(&ifaddrs))
 		err(EXIT_FAILURE, "ifaddrs");
 
-	for (int svn = 0; svn < ARRAY_SIZE(services); svn++) {
+	for (svn = 0; svn < ARRAY_SIZE(services); svn++) {
 		struct service *sv = &services[svn];
 
 		if (!(ipv46 & _4) && sv->family == AF_INET)
@@ -735,14 +727,20 @@ again:
 		if (!(llmnrwsdd & _WSDD) && strstr(sv->name, "wsdd"))
 			continue;
 
+		struct ifaddrs *ifa;
+
 		if (sv->family == AF_INET || sv->family == AF_INET6) {
-			for (struct ifaddrs *ifa = ifaddrs; ifa; ifa = ifa->ifa_next) {
+			for (ifa = ifaddrs; ifa; ifa = ifa->ifa_next) {
 				if (!ifa->ifa_addr ||
 					(ifa->ifa_addr->sa_family != sv->family) ||
 					(ifa->ifa_flags & IFF_LOOPBACK) ||
 					(ifa->ifa_flags & IFF_SLAVE) ||
-					(ifname && strcmp(ifa->ifa_name, ifname !=0)) ||
-					(strncmp(ifa->ifa_name, "br0", 3)) ||
+					(ifname && strcmp(ifa->ifa_name, ifname)) ||
+					(!strcmp(ifa->ifa_name, "LeafNets")) ||
+					(!strncmp(ifa->ifa_name, "docker", 6)) ||
+					(!strncmp(ifa->ifa_name, "veth", 4)) ||
+					(!strncmp(ifa->ifa_name, "tun", 3)) ||
+					(!strncmp(ifa->ifa_name, "zt", 2)) ||
 					(sv->mcast_addr &&
 					!(ifa->ifa_flags & IFF_MULTICAST)))
 					continue;
@@ -756,26 +754,26 @@ again:
 				}
 
 				char ifaddr[_ADDRSTRLEN];
-				const char *servicename[] = {
-					[SOCK_STREAM]	= "tcp",
-					[SOCK_DGRAM]	= "udp",
-					[SOCK_RAW]	= "raw",
-				};
-				void *addr = _SIN_ADDR((_saddr_t *)ifa->ifa_addr);
+				void *addr =
+					_SIN_ADDR((_saddr_t *)ifa->ifa_addr);
 
-				inet_ntop(ifa->ifa_addr->sa_family, addr, ifaddr, sizeof(ifaddr));
-				DEBUG(2, W, "%s %s %s %s:%d @ %s", sv->name, servicename[sv->type],
-					sv->mcast_addr ? sv->mcast_addr : "-",
-					ifaddr, sv->port_num, ifa->ifa_name);
+				inet_ntop(ifa->ifa_addr->sa_family, addr,
+						ifaddr, sizeof ifaddr);
+
+				DEBUG(2, W, "%s %s %s@%s",
+					sv->name,
+					sv->mcast_addr ? sv->mcast_addr : "",
+					ifa->ifa_name,
+					ifaddr);
 
 				if (open_ep(&ep, sv, ifa)) {
 					syslog(LOG_USER | LOG_ERR, "error: %s: %s",
 						ep->service->name, ep->errstr);
 					free(ep);
 					continue;
-				} else if (ep->sock < 0) {
+				} else if (ep->sock < 0)
 					free(ep);
-				} else {
+				else {
 					ep->next = endpoints;
 					endpoints = ep;
 					FD_SET(ep->sock, &fds);
@@ -792,9 +790,9 @@ again:
 			if (open_ep(&ep, sv, &ifa)) {
 				badep = ep;
 				break;
-			} else if (ep->sock < 0) {
+			} else if (ep->sock < 0)
 				free(ep);
-			} else {
+			else {
 				ep->next = endpoints;
 				endpoints = ep;
 				FD_SET(ep->sock, &fds);

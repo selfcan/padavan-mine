@@ -7,9 +7,6 @@
 # This is free software.  You may distribute it under
 # the terms of the GNU General Public License,
 # version 2, or at your option any later version.
-
-include Makefile.ver
-
 #
 # Note on debugging flags:
 # -DDEBUG_ZLB shows all ZLB exchange traffic
@@ -27,6 +24,7 @@ include Makefile.ver
 # -DDEBUG_MAGIC
 # -DDEBUG_FLOW_MORE
 # -DDEBUG_AUTH
+# -DDEBUG_MORE
 #
 # -DTEST_HIDDEN makes Assigned Call ID sent as a hidden AVP
 #
@@ -39,6 +37,13 @@ include Makefile.ver
 # The cost of not trusting pppd to die (and shoot it down hard), is that your
 # pppd's ip-down scripts will not have a chance to run.
 #
+# -DDISABLE_OCRP_OCCN
+# Defining DISABLE_OCRP_OCCN disable L2TPv3 extensions support.
+# Uncommented this if use only as l2tp client.
+#
+# -DFIX_ZLB
+# Defining FIX_ZLB for fix connections with some providers.
+#
 # For more details see: http://bugs.xelerance.com/view.php?id=739
 #
 # Confirmed bad versions of pppd:
@@ -49,15 +54,16 @@ include Makefile.ver
 # ppp 2.4.3 sends a SIGTERM after 5 seconds, so it should be safe to
 # trust pppd. This work around will be removed in the near future.
 
-# DFLAGS= -g -DDEBUG_HELLO -DDEBUG_CLOSE -DDEBUG_FLOW -DDEBUG_PAYLOAD -DDEBUG_CONTROL -DDEBUG_CONTROL_XMIT -DDEBUG_FLOW_MORE -DDEBUG_MAGIC -DDEBUG_ENTROPY -DDEBUG_HIDDEN -DDEBUG_PPPD -DDEBUG_AAA -DDEBUG_FILE -DDEBUG_FLOW -DDEBUG_HELLO -DDEBUG_CLOSE -DDEBUG_ZLB -DDEBUG_AUTH
-DFLAGS?= -DDEBUG_PPPD -DTRUST_PPPD_TO_DIE
+# DFLAGS= -g -DFIX_ZLB -DTRUST_PPPD_TO_DIE -DDEBUG_HELLO -DDEBUG_CLOSE -DDEBUG_FLOW -DDEBUG_PAYLOAD -DDEBUG_CONTROL -DDEBUG_CONTROL_XMIT -DDEBUG_FLOW_MORE -DDEBUG_MAGIC -DDEBUG_ENTROPY -DDEBUG_HIDDEN -DDEBUG_PPPD -DDEBUG_AAA -DDEBUG_FILE -DDEBUG_FLOW -DDEBUG_HELLO -DDEBUG_CLOSE -DDEBUG_ZLB -DDEBUG_AUTH -DDEBUG_MORE
+# DFLAGS?= -DDEBUG_PPPD -DTRUST_PPPD_TO_DIE
+
+DFLAGS= -g -DFIX_ZLB -DTRUST_PPPD_TO_DIE
 
 # Uncomment the next line for Linux. KERNELSRC is needed for if_pppol2tp.h,
 # but we use a local copy if we don't find it.
 #
 #KERNELSRC=/lib/modules/`uname -r`/build/
-KERNELSRC?=./linux
-OSFLAGS?= -DLINUX -I$(KERNELSRC)/include/
+OSFLAGS?= -DLINUX -I$(KERNEL_HEADERS_PATH)
 #
 # Uncomment the following to use the kernel interface under Linux
 # This requires the pppol2tp-linux-2.4.27.patch patch from contrib
@@ -67,64 +73,57 @@ OSFLAGS?= -DLINUX -I$(KERNELSRC)/include/
 #
 OSFLAGS+= -DUSE_KERNEL
 #
+# Uncomment the following for set high prio for xl2tpd process
+#
+OSFLAGS+= -DHIGH_PRIO
 #
 # Uncomment the next line for FreeBSD
 #
-#OSFLAGS?= -DFREEBSD
-#
-# Uncomment the next three lines for NetBSD
-#
-#OSFLAGS?= -DNETBSD
-#CFLAGS+= -D_NETBSD_SOURCE
-#LDLIBS?= -lutil
+#OSFLAGS= -DFREEBSD
 #
 # Uncomment the next line for Solaris. For solaris, at least,
 # we don't want to specify -I/usr/include because it is in
 # the basic search path, and will over-ride some gcc-specific
 # include paths and cause problems.
 #
-#CC?=gcc
-# Change /opt/sfw/ to whereever your pcap library/include files are
-#OSFLAGS?= -DSOLARIS -DPPPD=\"/usr/bin/pppd\" -std=c99 -pedantic -D__EXTENSIONS__ -D_XPG4_2 -D_XPG6 -I/opt/sfw/include
-#OSLIBS?= -lnsl -lsocket
+#OSFLAGS= -DSOLARIS
+#OSLIBS= -lnsl -lsocket
 
 # Uncomment the next two lines for OpenBSD
 #
-#OSFLAGS?= -DOPENBSD
-#LDLIBS?= -lutil
+#OSFLAGS= -DOPENBSD
+#LDLIBS= -lutil
 
 # Feature flags
 #
 # Comment the following line to disable xl2tpd maintaining IP address
 # pools to pass to pppd to control IP address allocation
 
-IPFLAGS?= -DIP_ALLOCATION
+IPFLAGS= -DIP_ALLOCATION
 
-CFLAGS+= $(DFLAGS) -Os -Wall -Wextra -DSANITY $(OSFLAGS) $(IPFLAGS)
+CFLAGS+= $(DFLAGS) -fPIC -pipe -fno-builtin -Wall -DSANITY $(OSFLAGS) $(IPFLAGS)
 HDRS=l2tp.h avp.h misc.h control.h call.h scheduler.h file.h aaa.h md5.h
 OBJS=xl2tpd.o pty.o misc.o control.o avp.o call.o network.o avpsend.o scheduler.o file.o aaa.o md5.o
 SRCS=${OBJS:.o=.c} ${HDRS}
 CONTROL_SRCS=xl2tpd-control.c
-#LIBS= $(OSLIBS) # -lefence # efence for malloc checking
 EXEC=xl2tpd
 CONTROL_EXEC=xl2tpd-control
 
-PREFIX?=/usr/local
+PREFIX?=./filesystem
 SBINDIR?=$(DESTDIR)${PREFIX}/sbin
 BINDIR?=$(DESTDIR)${PREFIX}/bin
 MANDIR?=$(DESTDIR)${PREFIX}/share/man
 
+CFLAGS  += -ffunction-sections -fdata-sections
+LDFLAGS += -Wl,--gc-sections
 
-all: $(EXEC)
+all: $(EXEC) 
 
 clean:
-	rm -f $(OBJS) $(EXEC) pfc.o pfc $(CONTROL_EXEC)
+	rm -f $(OBJS) $(EXEC) pfc.o pfc
 
 $(EXEC): $(OBJS) $(HDRS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
-
-$(CONTROL_EXEC): $(CONTROL_SRCS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(CONTROL_SRCS) -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
 
 pfc:
 	$(CC) $(CFLAGS) -c contrib/pfc.c
@@ -133,3 +132,5 @@ pfc:
 romfs:
 	$(ROMFSINST) /usr/sbin/$(EXEC)
 
+TAGS:	${SRCS}
+	etags ${SRCS}

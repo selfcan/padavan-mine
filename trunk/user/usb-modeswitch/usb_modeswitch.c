@@ -1,8 +1,8 @@
 /*
   Mode switching tool for controlling mode of 'multi-state' USB devices
-  Version 2.6.0, 2019/11/28
+  Version 2.5.2, 2017/12/31
 
-  Copyright (C) 2007 - 2019 Josua Dietze (mail to "usb_admin" at the domain
+  Copyright (C) 2007 - 2017 Josua Dietze (mail to "usb_admin" at the domain
   of the home page; or write a personal message through the forum to "Josh".
   NO SUPPORT VIA E-MAIL - please use the forum for that)
 
@@ -45,7 +45,7 @@
 
 /* Recommended tab size: 4 */
 
-#define VERSION "2.6.0"
+#define VERSION "2.5.2"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -144,7 +144,7 @@ unsigned int ModeMap = 0;
 
 int PantechMode=0;
 char verbose=0, show_progress=1, ResetUSB=0, CheckSuccess=0, config_read=0;
-char NoDriverLoading=0, sysmode=0, mbim=0;
+char NoDriverLoading=0, InquireDevice=0, sysmode=0, mbim=0;
 char StandardEject=0;
 
 char MessageContent[LINE_DIM];
@@ -249,6 +249,7 @@ void readConfigFile(const char *configFilename)
 	ParseParamInt(configFilename, ReleaseDelay);
 	ParseParamHex(configFilename, ResponseEndpoint);
 	ParseParamHex(configFilename, ResetUSB);
+	ParseParamHex(configFilename, InquireDevice);
 	ParseParamInt(configFilename, CheckSuccess);
 	ParseParamHex(configFilename, Interface);
 	ParseParamHex(configFilename, Configuration);
@@ -328,6 +329,8 @@ void printConfig()
 		fprintf (output,"Configuration=0x%02x\n",	Configuration);
 	if ( AltSetting > -1 )
 		fprintf (output,"AltSetting=0x%02x\n",	AltSetting);
+	if ( InquireDevice )
+		fprintf (output,"InquireDevice=1\n");
 	if ( CheckSuccess )
 		fprintf (output,"Success check enabled, max. wait time %d seconds\n", CheckSuccess);
 	if ( sysmode )
@@ -376,7 +379,7 @@ int readArguments(int argc, char **argv)
 			case 'J': ModeMap = ModeMap + HUAWEINEW_MODE; break;
 			case 'X': ModeMap = ModeMap + HUAWEIALT_MODE; break;
 			case 'S': ModeMap = ModeMap + SIERRA_MODE; break;
-			case 'O': ModeMap = ModeMap + SONY_MODE; break;; break;
+			case 'O': ModeMap = ModeMap + SONY_MODE; break;
 			case 'B': ModeMap = ModeMap + QISDA_MODE; break;
 			case 'E': ModeMap = ModeMap + QUANTA_MODE; break;
 			case 'G': ModeMap = ModeMap + GCT_MODE; break;
@@ -394,7 +397,7 @@ int readArguments(int argc, char **argv)
 			case 'Q': show_progress = 0; verbose = 0; count--; break;
 			case 'D': sysmode = 1; count--; break;
 			case 's': CheckSuccess = strtol(optarg, NULL, 10); count--; break;
-			case 'I': break;
+			case 'I': InquireDevice = 1; break;
 			case 'b': busnum = strtol(optarg, NULL, 10); break;
 			case 'g': devnum = strtol(optarg, NULL, 10); break;
 
@@ -613,7 +616,7 @@ int main(int argc, char **argv)
 		}
 
 	/* Check or get endpoints and alloc message list if needed*/
-	if (strlen(MessageContent) || StandardEject || ModeMap & CISCO_MODE
+	if (strlen(MessageContent) || StandardEject || InquireDevice || ModeMap & CISCO_MODE
 				|| ModeMap & HUAWEINEW_MODE || ModeMap & HUAWEIALT_MODE
 				|| ModeMap & OPTION_MODE) {
 
@@ -638,6 +641,16 @@ int main(int argc, char **argv)
 		SHOW_PROGRESS(output,"Use endpoints 0x%02x (out) and 0x%02x (in)\n", MessageEndpoint,
 				ResponseEndpoint);
 
+	}
+
+	if (InquireDevice) {
+		if (defaultClass == 0x08) {
+			SHOW_PROGRESS(output,"Inquire device details; driver will be detached ...\n");
+			detachDrivers();
+			InquireDevice = 2;
+			deviceInquire();
+		} else
+			SHOW_PROGRESS(output,"Not a storage device, skip SCSI inquiry\n");
 	}
 
 	if (verbose) {
@@ -674,14 +687,17 @@ int main(int argc, char **argv)
 		openlog("usb_modeswitch", 0, LOG_SYSLOG);
 		syslog(LOG_NOTICE, "switch device %04x:%04x on %03d/%03d", DefaultVendor, DefaultProduct,
 				busnum, devnum);
-
 	}
 
 	if (ModeMap & DETACHONLY_MODE) {
 		SHOW_PROGRESS(output,"Detach storage driver as switching method ...\n");
-		ret = detachDrivers();
-		if (ret == 2)
-			SHOW_PROGRESS(output," You may want to remove the storage driver manually\n");
+		if (InquireDevice == 2) {
+			SHOW_PROGRESS(output," Any driver was already detached for inquiry. Do nothing\n");
+		} else {
+			ret = detachDrivers();
+			if (ret == 2)
+				SHOW_PROGRESS(output," You may want to remove the storage driver manually\n");
+		}
 	}
 
 	if(ModeMap & HUAWEI_MODE) {
@@ -716,7 +732,7 @@ int main(int argc, char **argv)
 	}
 	if(ModeMap & BLACKBERRY_MODE) {
 		detachDrivers();
-	    switchBlackberryMode();
+		switchBlackberryMode();
 	}
 	if(ModeMap & PANTECH_MODE) {
 		detachDrivers();
@@ -901,6 +917,73 @@ void deviceDescription ()
 	fprintf(output,"-------------------------\n");
 }
 
+/* Print result of SCSI command INQUIRY (identification details) */
+int deviceInquire ()
+{
+	const unsigned char inquire_msg[] = {
+	  0x55, 0x53, 0x42, 0x43, 0x12, 0x34, 0x56, 0x78,
+	  0x24, 0x00, 0x00, 0x00, 0x80, 0x00, 0x06, 0x12,
+	  0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x00,
+	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	};
+	char *command;
+	char data[36];
+	int i, ret=0;
+
+	command = malloc(31);
+	if (command == NULL) {
+		ret = 1;
+		goto out;
+	}
+
+	memcpy(command, inquire_msg, sizeof (inquire_msg));
+
+	ret = libusb_claim_interface(devh, Interface);
+	if (ret != 0) {
+		SHOW_PROGRESS(output," Could not claim interface (error %d). Skip device inquiry\n", ret);
+		goto out;
+	}
+	libusb_clear_halt(devh, MessageEndpoint);
+
+	ret = usb_bulk_io(devh, MessageEndpoint, (char *)command, 31, 0);
+	if (ret < 0) {
+		SHOW_PROGRESS(output," INQUIRY message failed (error %d)\n", ret);
+		goto out;
+	}
+
+	ret = usb_bulk_io(devh, ResponseEndpoint, data, 36, 200);
+	if (ret < 0) {
+		SHOW_PROGRESS(output," INQUIRY response failed (error %d)\n", ret);
+		goto out;
+	}
+
+	i = usb_bulk_io(devh, ResponseEndpoint, command, 13, 0);
+
+	fprintf(output,"\nSCSI inquiry data (for identification)\n");
+	fprintf(output,"-------------------------\n");
+
+	fprintf(output,"  Vendor String: ");
+	for (i = 8; i < 16; i++) printf("%c",data[i]);
+	fprintf(output,"\n");
+
+	fprintf(output,"   Model String: ");
+	for (i = 16; i < 32; i++) printf("%c",data[i]);
+	fprintf(output,"\n");
+
+	fprintf(output,"Revision String: ");
+	for (i = 32; i < 36; i++) printf("%c",data[i]);
+
+	fprintf(output,"\n-------------------------\n");
+
+out:
+	if (strlen(MessageContent) == 0) {
+		libusb_clear_halt(devh, MessageEndpoint);
+		libusb_release_interface(devh, Interface);
+	}
+	free(command);
+	return ret;
+}
+
 
 /* Auxiliary function used by the wrapper */
 int findMBIMConfig(int vendor, int product, int mode)
@@ -979,14 +1062,13 @@ void resetUSB ()
 			fflush(output);
 		}
 		bpoint++;
-		if (bpoint > 100) {
-			SHOW_PROGRESS(output," Reset USB device failed with error %d", success);
-			fprintf(stderr,"Reset USB device failed with error %d", success);
+		if (bpoint > 100)
 			success = 1;
-		}
 	} while (success < 0);
 
-	if ( success == 0 )
+	if ( success ) {
+		SHOW_PROGRESS(output,"\n Device reset failed.\n");
+	} else
 		SHOW_PROGRESS(output,"\n Device was reset\n");
 }
 
@@ -1002,10 +1084,12 @@ int switchSendMessage ()
 	msg[2] = MessageContent3;
 */
 	SHOW_PROGRESS(output,"Set up interface %d\n", Interface);
-	ret = libusb_claim_interface(devh, Interface);
-	if (ret != 0) {
-		SHOW_PROGRESS(output," Could not claim interface (error %d). Skip message sending\n", ret);
-		return 0;
+	if (InquireDevice != 2) {
+		ret = libusb_claim_interface(devh, Interface);
+		if (ret != 0) {
+			SHOW_PROGRESS(output," Could not claim interface (error %d). Skip message sending\n", ret);
+			return 0;
+		}
 	}
 
 	SHOW_PROGRESS(output,"Use endpoint 0x%02x for message sending ...\n", MessageEndpoint);
@@ -1075,12 +1159,9 @@ int switchConfiguration ()
 
 	SHOW_PROGRESS(output,"Change configuration to %i ...\n", Configuration);
 	detachDrivers();
-//	ret = libusb_set_configuration(devh, -1);
-	ret = libusb_set_configuration(devh, 0);
+	ret = libusb_set_configuration(devh, -1);
 	if (ret < 0) {
 		SHOW_PROGRESS(output," Resetting the configuration failed (error %d). Try to continue\n", ret);
-	} else {
-		SHOW_PROGRESS(output," Configuration was reset\n");
 	}
 	/* Empirically tested wait period, improves reliability of configuration change */
 	usleep(100000);
@@ -1469,6 +1550,11 @@ int switchSonyMode ()
 int detachDrivers()
 {
 	int i, ret;
+
+	// Driver already detached during SCSI inquiry ?
+	if (InquireDevice == 2)
+		return 1;
+
 	SHOW_PROGRESS(output,"Looking for active drivers ...\n");
 	ret = libusb_kernel_driver_active(devh, 0);
 	if (ret == LIBUSB_ERROR_NOT_SUPPORTED) {
@@ -1531,7 +1617,7 @@ int sendMessage(char* message, int count)
 
 int checkSuccess()
 {
-	int ret, i;
+	int ret = 0, i = 0;
 	int newTargetCount, success=0;
 
 	SHOW_PROGRESS(output,"\nCheck for mode switch (max. %d times, once per second) ...\n", CheckSuccess);
@@ -1707,12 +1793,12 @@ struct libusb_device* search_devices( int *numFound, int vendor, char* productLi
 	if (!vendor || *productList == '\0')
 		return NULL;
 
-	listcopy = malloc(strlen(productList)+1);
-
 	if (libusb_get_device_list(ctx, &devs) < 0) {
 		perror("Libusb failed to get USB access!");
 		return 0;
 	}
+
+	listcopy = malloc(strlen(productList)+1);
 
 	while ((dev = devs[i++]) != NULL) {
 		struct libusb_device_descriptor descriptor;
@@ -2033,16 +2119,14 @@ void close_all()
 			free(Messages[i]);
 		}
 		free(Messages);
+		Messages = NULL;
 	}
 	if (active_config)
 		libusb_free_config_descriptor(active_config);
 	if (devh)
 		libusb_close(devh);
-	// libusb_exit will crash on Raspbian 7, crude protection
-#ifndef __ARMEL__
 	if (ctx)
-		libusb_exit(NULL);
-#endif
+		libusb_exit(ctx);
 	if (sysmode)
 		closelog();
 }
@@ -2082,9 +2166,9 @@ void printHelp()
 	" -g, --device-num NUM          system device number (for hard ID)\n"
 	" -m, --message-endpoint NUM    direct the message transfer there (optional)\n"
 	" -M, --message-content <msg>   message to send (hex number as string)\n"
-	" -2, --message-content2 <msg>\n"
-	" -3, --message-content3 <msg>  additional messages to send if needed\n"
-	" -w, --release-delay <msecs>   wait a while before releasing the interface\n"
+	" -2, --message-content2 <msg>  additional messages to send (-n recommended)\n"
+	" -3, --message-content3 <msg>  additional messages to send (-n recommended)\n"
+	" -w, --release-delay NUM       wait NUM ms before releasing the interface\n"
 	" -n, --need-response           obsolete, no effect (always on)\n"
 	" -r, --response-endpoint NUM   read response from there (optional)\n"
 	" -K, --std-eject               send standard EJECT sequence\n"
@@ -2108,8 +2192,8 @@ void printHelp()
 	" -Q, --quiet                   don't show progress or error messages\n"
 	" -W, --verbose                 print all settings and debug output\n"
 	" -D, --sysmode                 specific result and syslog message\n"
-	" -s, --check-success <seconds> check switching result, with timeout\n"
-	" -I, --inquire                 obsolete, no effect\n\n"
+	" -s, --check-success <seconds> switching result check with timeout\n"
+	" -I, --inquire                 retrieve SCSI attributes initially\n\n"
 	" -c, --config-file <filename>  load long configuration from file\n\n"
 	" -t, --stdinput                read long configuration from stdin\n\n"
 	" -f, --long-config <text>      get long configuration from string\n\n"

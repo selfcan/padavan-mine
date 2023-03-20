@@ -1,4 +1,4 @@
-SRC_NAME=parted-3.5
+SRC_NAME=parted-3.3
 SRC_URL=https://ftp.gnu.org/gnu/parted/$(SRC_NAME).tar.xz 
 
 CFLAGS += -ffunction-sections -fdata-sections
@@ -17,7 +17,7 @@ download_test:
 extract_test:
 	( if [ ! -d $(SRC_NAME) ]; then \
 		tar xJf $(SRC_NAME).tar.xz; \
-		patch -d $(SRC_NAME) -p1 -i ../parted.patch; \
+		patch -d $(SRC_NAME) -p1 -i ../$(SRC_NAME).patch; \
 	fi )
 
 config_test:
@@ -31,6 +31,7 @@ configure:
 	( cd $(SRC_NAME) ; \
 	autoreconf -fvi; \
 	PKG_CONFIG_PATH="$(STAGEDIR)/lib/pkgconfig" \
+	LIBS="-liconv" \
 	./configure \
 		--prefix=/usr \
 		--without-readline \

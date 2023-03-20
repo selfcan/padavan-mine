@@ -23,6 +23,17 @@
 #include <errno.h>
 #include <string.h>
 #include <syslog.h>
+#if defined (__GLIBC__) && (__GLIBC__ < 2)
+# if defined(FREEBSD) || defined(OPENBSD)
+#  include <sys/signal.h>
+# elif defined(LINUX)
+#  include <bsd/signal.h>
+# elif defined(SOLARIS)
+#  include <signal.h>
+# endif
+#else
+# include <signal.h>
+#endif
 #if defined(SOLARIS)
 # include <varargs.h>
 #endif
@@ -38,8 +49,6 @@ static int syslog_nesting = 0;
     }                               \
     --syslog_nesting;               \
 } while(0)
-
-#define UNUSED(x) (void)(x)
 
 void init_log()
 {
@@ -152,7 +161,7 @@ void bufferDump (unsigned char *buf, int buflen)
 
 void do_packet_dump (struct buffer *buf)
 {
-    size_t x;
+    int x;
     unsigned char *c = buf->start;
     printf ("packet dump: \nHEX: { ");
     for (x = 0; x < buf->len; x++)
@@ -262,8 +271,6 @@ void opt_destroy (struct ppp_opts *option)
 
 int get_egd_entropy(char *buf, int count)
 {
-    UNUSED(buf);
-    UNUSED(count);
     return -1;
 }
 
@@ -333,3 +340,42 @@ int get_entropy (unsigned char *buf, int count)
 	    return -1;
     }
 }
+
+#ifndef TRUST_PPPD_TO_DIE
+int is_pid_exist(pid_t pid)
+{
+	char dirpath[32];
+	struct stat stat_buf;
+
+	sprintf(dirpath, "/proc/%u", (unsigned)pid);
+	if (stat(dirpath, &stat_buf) == 0)
+		return S_ISDIR(stat_buf.st_mode);
+	else
+		return 0;
+}
+#endif
+
+void kill_pppd (pid_t pid)
+{
+#ifdef DEBUG_PPPD
+	l2tp_log (LOG_DEBUG, "Terminating pppd: sending TERM signal to pid %d\n", pid);
+#endif
+	/* first try correct stop */
+	kill (pid, SIGTERM);
+#ifndef TRUST_PPPD_TO_DIE
+	int i;
+	/* wait max 3 secs */
+	for (i=0; i < 3; i++)
+	{
+		if (!is_pid_exist(pid))
+			return;
+		sleep(1);
+	}
+#ifdef DEBUG_PPPD
+	l2tp_log (LOG_DEBUG, "Terminating pppd: sending KILL signal to pid %d\n", pid);
+#endif
+	/* kill now */
+	kill (pid, SIGKILL);
+#endif
+}
+

@@ -33,6 +33,14 @@ function initial(){
 	insertChannelOption();
 	document.form.wl_channel.remove(0);
 
+	if (typeof(support_5g_wid) === 'function'){
+		wid = support_5g_wid();
+		if (wid==7915){
+			document.form.wl_mode_x.remove(1);
+			document.form.wl_mode_x.remove(1);
+		}
+	}
+
 	showLANIPList();
 
 	change_wireless_bridge();
@@ -60,6 +68,8 @@ function applyRule(){
 function validForm(){
 	var m = document.form.wl_mode_x.value;
 	if (m == "3" || m == "4") {
+		if(!validate_string_ssid(document.form.wl_sta_ssid))
+			return false;
 		if(document.form.wl_sta_ssid.value == "") {
 			document.form.wl_sta_ssid.focus();
 			return false;
@@ -197,7 +207,11 @@ function showLANIPList(){
 
 	if(wds_aplist != ""){
 		for(var i = 0; i < wds_aplist.length ; i++){
-			wds_aplist[i][0] = decodeSSID(wds_aplist[i][0]);
+			try {
+				wds_aplist[i][0] = decodeURIComponent(wds_aplist[i][0]);
+			} catch (e) {
+				console.log("malformed utf-8 ssid:"+wds_aplist[i][0]);
+			}
 			if(wds_aplist[i][0] && wds_aplist[i][0].length > 16)
 				show_name = wds_aplist[i][0].substring(0, 14) + "..";
 			else
@@ -270,7 +284,7 @@ function hideClients_Block(){
     <input type="hidden" name="wl_channel_org" value="<% nvram_get_x("","wl_channel"); %>">
     <input type="hidden" name="wl_wdsnum_x_0" value="<% nvram_get_x("", "wl_wdsnum_x"); %>" readonly="1">
     <input type="hidden" name="wl_sta_auto" value="<% nvram_get_x("", "wl_sta_auto"); %>" />
-    <input type="hidden" name="wl_sta_ssid_org" value="<% nvram_get_x("", "wl_sta_ssid"); %>">
+    <input type="hidden" name="wl_sta_ssid_org" value="<% nvram_char_to_ascii("", "wl_sta_ssid"); %>">
     <input type="hidden" name="wl_sta_wpa_mode" value="<% nvram_get_x("","wl_sta_wpa_mode"); %>">
     <input type="hidden" name="wl_sta_wpa_psk_org" value="<% nvram_char_to_ascii("", "wl_sta_wpa_psk"); %>">
 
@@ -355,12 +369,12 @@ function hideClients_Block(){
 
                                     <table width="100%" align="center" cellpadding="4" cellspacing="0" class="table">
                                         <tr id="row_wds_apc" style="display:none;">
-                                            <th width="50%"><a id="ctl_apc_1" class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 0, 1);">STA SSID:</a></th>
+                                            <th width="50%"><a id="ctl_apc_1" class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 0, 1);"><#APSTA_SSID#></a></th>
                                             <td>
                                                 <div id="WDSAPList" class="alert alert-info ddown-list"></div>
                                                 <div class="input-append" style="float: left;">
                                                     <input type="text" id="ctl_wds_1" name="wl_wdslist_x_0" maxlength="12" size="14" onKeyPress="return is_hwaddr(event);" style="float:left; width: 175px;">
-                                                    <input type="text" id="ctl_apc_2" name="wl_sta_ssid" value="" maxlength="32" class="input" size="20" style="float:left; width: 175px;"/>
+                                                    <input type="text" id="ctl_apc_2" name="wl_sta_ssid" value="" maxlength="32" class="input" size="20" onKeyPress="return is_string(this,event);" style="float:left; width: 175px;"/>
                                                     <button class="btn btn-chevron" id="ctl_wds_2" type="button" onclick="pullLANIPList(this);" title="Select the Access Point"><i class="icon icon-chevron-down"></i></button>
                                                 </div>
 

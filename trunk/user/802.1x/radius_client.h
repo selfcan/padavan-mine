@@ -27,11 +27,7 @@ struct radius_msg_list {
 typedef enum {
 	RADIUS_RX_PROCESSED,
 	RADIUS_RX_QUEUED,
-	RADIUS_RX_UNKNOWN,
-	/**
-	 * RADIUS_RX_INVALID_AUTHENTICATOR - Message has invalid Authenticator
-	 */	
-	RADIUS_RX_INVALID_AUTHENTICATOR
+	RADIUS_RX_UNKNOWN
 } RadiusRxResult;
 
 struct radius_rx_handler {
@@ -42,7 +38,7 @@ struct radius_rx_handler {
 
 struct radius_client_data {
 
-#if MULTIPLE_RADIUS
+#ifdef MULTIPLE_RADIUS
 	int mbss_auth_serv_sock[MAX_MBSSID_NUM]; /* socket for authentication RADIUS messages */
 #else
 	int auth_serv_sock; /* socket for authentication RADIUS messages */

@@ -5,10 +5,10 @@ endif
 include boards.mk
 include cflags.mk
 
-CFLAGS += -ffunction-sections -fdata-sections -fPIC
+CFLAGS += -fPIC
 CFLAGS += -Wall -I. -I./include -I$(ROOTDIR)/$(LINUXDIR)/include/nvram
 
-LDFLAGS += -Wl,--gc-sections -L.
+LDFLAGS += -L.
 
 OBJS := shutils.o netutils.o rtutils.o defaults.o nvram_linux.o notify_rc.o bin_sem_asus.o flash_mtd.o pids.o
 

@@ -118,7 +118,7 @@ namespace libjson
 	
 	int get_top(void) { return index; }
 	
-	void reset_key(void) { key[index]=0; }
+	int reset_key(void) { key[index]=0; }
 	int get_key(void) { return ++key[index]; }
     };
     
