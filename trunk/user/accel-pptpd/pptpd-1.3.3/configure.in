@@ -2,6 +2,7 @@ AC_INIT(configure.in)
 
 AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE(pptpd,0.8.5)
+AM_MAINTAINER_MODE([disable])
 
 AC_DEFINE(BCRELAY,[],"Enable Broadcast Relay")
 AC_DEFINE(PPPD_VERSION,[],"PPPD version")

@@ -269,9 +269,6 @@ write_smb_conf(void)
 	fprintf(fp, "dos filemode = yes\n");
 	fprintf(fp, "dos filetimes = yes\n");
 	fprintf(fp, "dos filetime resolution = yes\n");
-	fprintf(fp, "access based share enum = yes\n");
-	fprintf(fp, "veto files = /Thumbs.db/.DS_Store/._*/.apdisk/.TemporaryItems/");
-	fprintf(fp, "delete veto files = yes\n");
 	fprintf(fp, "\n");
 
 	disks_info = read_disk_data();
@@ -283,12 +280,12 @@ write_smb_conf(void)
 		for (follow_disk = disks_info; follow_disk != NULL; follow_disk = follow_disk->next) {
 			for (follow_partition = follow_disk->partitions; follow_partition != NULL; follow_partition = follow_partition->next) {
 				char *mount_folder;
-				
+
 				if (follow_partition->mount_point == NULL)
 					continue;
-				
+
 				mount_folder = strrchr(follow_partition->mount_point, '/')+1;
-				
+
 				fprintf(fp, "[%s]\n", mount_folder);
 				fprintf(fp, "comment = %s's %s\n", follow_disk->tag, mount_folder);
 				fprintf(fp, "path = %s\n", follow_partition->mount_point);
@@ -319,38 +316,36 @@ write_smb_conf(void)
 	} else {
 		int n, acc_num = 0, sh_num=0;
 		char **account_list;
-		
+
 		// get the account list
 		if (get_account_list(&acc_num, &account_list) < 0) {
 			free_2_dimension_list(&acc_num, &account_list);
 			goto confpage;
 		}
-		
+
 		for (follow_disk = disks_info; follow_disk != NULL; follow_disk = follow_disk->next) {
 			for (follow_partition = follow_disk->partitions; follow_partition != NULL; follow_partition = follow_partition->next) {
 				if (follow_partition->mount_point == NULL)
 					continue;
-				
+
 				char **folder_list;
-				
+
 				// 1. get the folder list
 				if (get_folder_list_in_mount_path(follow_partition->mount_point, &sh_num, &folder_list) < 0) {
 					free_2_dimension_list(&sh_num, &folder_list);
 					continue;
 				}
-				
+
 				// 2. start to get every share
 				for (n = 0; n < sh_num; ++n) {
 					int i, right, first;
 					char share[256];
-					
-					int guest_right = get_permission(SMB_GUEST_USER, follow_partition->mount_point, folder_list[n], "cifs");
 
 					memset(share, 0, 256);
 					strcpy(share, folder_list[n]);
-					
+
 					fclose(fp);
-					
+
 					if(check_existed_share(share)){
 						i = 1;
 						memset(share, 0, 256);
@@ -361,94 +356,80 @@ write_smb_conf(void)
 							sprintf(share, "%s(%d)", folder_list[n], i);
 						}
 					}
-					
+
 					if((fp = fopen(SAMBA_CONF, "a")) == NULL)
 						goto confpage;
 					fprintf(fp, "[%s]\n", share);
 					fprintf(fp, "comment = %s\n", folder_list[n]);
 					fprintf(fp, "path = %s/%s\n", follow_partition->mount_point, folder_list[n]);
-					fprintf(fp, /*(guest_right == 2) ? "writeable = yes\n" : */"writeable = no\n");
-					if (guest_right >= 1)
-						fprintf(fp, "guest ok = yes\n");
-					
+					fprintf(fp, "writeable = no\n");
+
 					fprintf(fp, "valid users = ");
 					first = 1;
-					if (guest_right >= 1) {
-						first = 0;
-						fprintf(fp, "%s", "nobody");
-					}
 					for (i = 0; i < acc_num; ++i) {
 						right = get_permission(account_list[i], follow_partition->mount_point, folder_list[n], "cifs");
 						if (first == 1)
 							first = 0;
 						else
 							fprintf(fp, ", ");
-						
+
 						fprintf(fp, "%s", account_list[i]);
 					}
 					fprintf(fp, "\n");
-					
+
 					fprintf(fp, "invalid users = ");
 					first = 1;
 					for (i = 0; i < acc_num; ++i) {
 						right = get_permission(account_list[i], follow_partition->mount_point, folder_list[n], "cifs");
 						if (right >= 1)
 							continue;
-						
+
 						if (first == 1)
 							first = 0;
 						else
 							fprintf(fp, ", ");
-						
+
 						fprintf(fp, "%s", account_list[i]);
 					}
 					fprintf(fp, "\n");
-					
+
 					fprintf(fp, "read list = ");
 					first = 1;
-					if (guest_right >= 1) {
-						first = 0;
-						fprintf(fp, "%s", "nobody");
-					}
 					for (i = 0; i < acc_num; ++i) {
 						right = get_permission(account_list[i], follow_partition->mount_point, folder_list[n], "cifs");
 						if (right < 1)
 							continue;
-						
+
 						if (first == 1)
 							first = 0;
 						else
 							fprintf(fp, ", ");
-						
+
 						fprintf(fp, "%s", account_list[i]);
 					}
 					fprintf(fp, "\n");
-					
+
 					fprintf(fp, "write list = ");
 					first = 1;
-					if (guest_right >= 2) {
-						first = 0;
-						fprintf(fp, "%s", "nobody");
-					}
 					for (i = 0; i < acc_num; ++i) {
 						right = get_permission(account_list[i], follow_partition->mount_point, folder_list[n], "cifs");
 						if (right < 2)
 							continue;
-						
+
 						if (first == 1)
 							first = 0;
 						else
 							fprintf(fp, ", ");
-						
+
 						fprintf(fp, "%s", account_list[i]);
 					}
 					fprintf(fp, "\n");
 				}
-				
+
 				free_2_dimension_list(&sh_num, &folder_list);
 			}
 		}
-		
+
 		free_2_dimension_list(&acc_num, &account_list);
 	}
 
@@ -504,9 +485,9 @@ stop_samba(int force_stop)
 {
 	char* svcs[] = { "smbd",
 #if defined (APP_SMBD36)
-	"wsdd2" ,
+	"wsdd2",
 #endif
-	 "nmbd", NULL };
+	"nmbd", NULL };
 
 	const int nmbdidx = sizeof(svcs) / sizeof(svcs[0]) - 2;
 
@@ -571,7 +552,7 @@ void run_samba(void)
 		doSystem("killall %s %s", "-SIGHUP", "wsdd2");
 	else
 		eval("/sbin/wsdd2", "-d", "-w");
-	
+
 	if (pids("wsdd2"))
 		logmessage("WSDD2", "daemon is started");
 #endif

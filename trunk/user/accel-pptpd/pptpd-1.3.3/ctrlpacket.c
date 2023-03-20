@@ -381,9 +381,9 @@ void deal_start_ctrl_conn(unsigned char *packet, unsigned char *rply_packet, ssi
 	start_ctrl_conn_rply.bearer_cap = htons(OUR_BEARER);
 	start_ctrl_conn_rply.max_channels = htons(MAX_CHANNELS);
 	start_ctrl_conn_rply.firmware_rev = htons(PPTP_FIRMWARE_VERSION);
-	bzero(start_ctrl_conn_rply.hostname, MAX_HOSTNAME_SIZE);
+	memset(start_ctrl_conn_rply.hostname, 0, MAX_HOSTNAME_SIZE);
 	strncpy((char *)start_ctrl_conn_rply.hostname, PPTP_HOSTNAME, MAX_HOSTNAME_SIZE);
-	bzero(start_ctrl_conn_rply.vendor, MAX_VENDOR_SIZE);
+	memset(start_ctrl_conn_rply.vendor, 0, MAX_VENDOR_SIZE);
 	strncpy((char *)start_ctrl_conn_rply.vendor, PPTP_VENDOR, MAX_VENDOR_SIZE);
 	COPY_CTRL_PACKET(start_ctrl_conn_rply, rply_packet, rply_size);
 	DEBUG_PACKET("START CTRL CONN RPLY");

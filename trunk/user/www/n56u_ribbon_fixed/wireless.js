@@ -2,7 +2,7 @@ var wep1, wep2, wep3, wep4;
 
 function automode_hint() {
     var gmode = document.form.wl_gmode.value;
-    if ((gmode == "2" || gmode == "3" || gmode == "4" || gmode == "5") &&
+    if ((gmode == "2" || gmode == "3" || gmode == "4") &&
        (document.form.wl_wep_x.value == 1 || document.form.wl_wep_x.value == 2 || document.form.wl_auth_mode.value == "radius" ||
             (document.form.wl_crypto.value.indexOf("tkip") == 0 && !document.form.wl_crypto.disabled)))
         $("wl_gmode_hint").style.display = "block";
@@ -465,7 +465,7 @@ function enableExtChRows(o) {
         $("row_HT_BW").style.display = "";
         $("row_HT_EXTCHA").style.display = "";
     }
-    if (o.value == "3" || o.value == "4" || o.value == "5")
+    if (o.value == "3" || o.value == "4")
         insert_vht_bw(1);
     else
         insert_vht_bw(0);
@@ -477,11 +477,19 @@ function insertChannelOption() {
     var orig = document.form.wl_channel.value;
     free_options(document.form.wl_channel);
 
-    if (country == "AL" ||
+    if (country == "BY")
+        channels = new Array(0, 36, 40, 44, 48, 52, 56, 60, 64, 132, 136, 140, 144); //Region 34
+        
+    if (country == "UA")
+        channels = new Array(0, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165); //Region 35
+        
+    if (country == "RU")
+        channels = new Array(0, 36, 40, 44, 48, 52, 56, 60, 64, 132, 136, 140, 144, 149, 153, 157, 161, 165); //Region 36
+
+    else if (country == "AL" ||
         country == "DZ" ||
         country == "AU" ||
         country == "BH" ||
-        country == "BY" ||
         country == "CA" ||
         country == "CL" ||
         country == "CO" ||
@@ -509,12 +517,10 @@ function insertChannelOption() {
         country == "QA" ||
         country == "CN" ||
         country == "RO" ||
-        country == "RU" ||
         country == "SA" ||
         country == "SG" ||
         country == "SY" ||
         country == "TH" ||
-        country == "UA" ||
         country == "AE" ||
         country == "US" ||
         country == "VN" ||

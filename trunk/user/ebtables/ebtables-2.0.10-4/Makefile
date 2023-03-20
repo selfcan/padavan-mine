@@ -17,14 +17,14 @@ INITDIR:=/etc/rc.d/init.d
 SYSCONFIGDIR:=/etc/sysconfig
 DESTDIR:=
 
-CFLAGS +=-Os -Wall -Wunused
+CFLAGS	+=-Os -Wall -Wunused -Werror
 CFLAGS_SH_LIB:=-fPIC -Os
 
 ifeq ($(shell uname -m),sparc64)
 CFLAGS+=-DEBT_MIN_ALIGN=8 -DKERNEL_64_USERSPACE_32
 endif
 
-CFLAGS  += -ffunction-sections -fdata-sections
+CFLAGS  += -ffunction-sections -fdata-sections -fvisibility=hidden
 LDFLAGS += -Wl,--gc-sections
 
 include extensions/Makefile

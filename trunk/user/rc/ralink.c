@@ -63,7 +63,7 @@ static const struct cc_t {
 	{ "AZ",  1,  2,  0 },
 	{ "BE",  1,  1,  0 },
 	{ "BH",  1,  0,  0 },
-	{ "BY",  1,  0,  0 },
+	{ "BY",  1,  34, 0 },
 	{ "BO",  1,  4,  0 },
 	{ "BR",  1,  1,  0 },
 	{ "BN",  1,  4,  0 },
@@ -132,7 +132,7 @@ static const struct cc_t {
 	{ "PR",  0,  0,  0 },
 	{ "QA",  1,  0,  0 },
 	{ "RO",  1,  0,  0 },
-	{ "RU",  1,  0,  0 },
+	{ "RU",  1,  36, 0 },
 	{ "SA",  1,  0,  0 },
 	{ "SG",  1,  0,  2 }, // SG
 	{ "SK",  1,  1,  0 },
@@ -145,7 +145,7 @@ static const struct cc_t {
 	{ "TR",  1,  2,  0 },
 	{ "TT",  1,  2,  0 },
 	{ "TW",  0,  3,  6 }, // NCC
-	{ "UA",  1,  0,  0 },
+	{ "UA",  1,  35, 0 },
 	{ "US",  0,  0,  5 }, // FCC
 	{ "UY",  1,  5,  0 },
 	{ "UZ",  0,  1,  0 },
@@ -684,10 +684,12 @@ gen_ralink_config(int is_soc_ap, int is_aband, int disable_autoscan)
 	fprintf(fp, "VHT_Sec80_Channel=%d\n", 0);
 	fprintf(fp, "SKUenable=%d\n", 0);
 	fprintf(fp, "PowerUpenable=%d\n", 0);
-	fprintf(fp, "VOW_Airtime_Fairness_En=%d\n", 0);
-	fprintf(fp, "VOW_Airtime_Ctrl_En=%d\n", 0);
 	fprintf(fp, "VOW_Rate_Ctrl_En=%d\n", 0);
 	fprintf(fp, "VOW_WATF_Enable=%d\n", 0);
+	fprintf(fp, "VOW_Group_Max_Rate=%d\n", 30);
+	fprintf(fp, "VOW_Group_Max_Ratio=%d\n", 10);
+	fprintf(fp, "VOW_Group_Min_Rate=%d\n", 10);
+	fprintf(fp, "VOW_Group_Min_Ratio=%d\n", 5);
 	fprintf(fp, "BandSteering=%d\n", 0);
 	fprintf(fp, "BFBACKOFFenable=%d\n", 0);
 	fprintf(fp, "DfsCalibration=%d\n", 0);
@@ -706,17 +708,29 @@ gen_ralink_config(int is_soc_ap, int is_aband, int disable_autoscan)
 	fprintf(fp, "MboSupport=%d\n", 0);
 
 #if defined (USE_MT7615_AP) || defined (USE_MT7915_AP)
-	fprintf(fp, "VOW_RX_En=%d\n", 1);
 	fprintf(fp, "E2pAccessMode=%d\n", 2);
 	fprintf(fp, "TxCmdMode=%d\n", 1);
 	fprintf(fp, "AMSDU_NUM=%d\n", 4);
 	fprintf(fp, "CP_SUPPORT=%d\n", 2);
+	fprintf(fp, "PMFMFPC=%d\n", 1);
+	fprintf(fp, "PMFMFPR=%d\n", 0);
+	fprintf(fp, "PMFSHA256=%d\n", 1);
 	fprintf(fp, "RED_Enable=%d\n", 1);
 #endif
 
 #if defined (USE_WID_2G) && (USE_WID_2G==7615 || USE_WID_2G==7915)
 	if (!is_aband) {
 		fprintf(fp, "G_BAND_256QAM=%d\n", nvram_wlan_get_int(0, "turbo_qam"));
+		if (nvram_wlan_get_int(0, "airtimefairness")) {
+			fprintf(fp, "VOW_Airtime_Fairness_En=%d\n", 1);
+			fprintf(fp, "VOW_Airtime_Ctrl_En=%d\n", 1);
+			fprintf(fp, "VOW_RX_En=%d\n", 1);
+		} else {
+			fprintf(fp, "VOW_Airtime_Fairness_En=%d\n", 0);
+			fprintf(fp, "VOW_Airtime_Ctrl_En=%d\n", 0);
+			fprintf(fp, "VOW_RX_En=%d\n", 0);
+		}
+		
 #if defined(BOARD_HAS_2G_11AX) && BOARD_HAS_2G_11AX
 		if (i_phy_mode == PHY_11AX_24G) {
 			/* 2.4g wifi6 mode */
@@ -752,6 +766,11 @@ gen_ralink_config(int is_soc_ap, int is_aband, int disable_autoscan)
 			fprintf(fp, "MuMimoDlEnable=%d\n", 0);
 			fprintf(fp, "MuMimoUlEnable=%d\n", 0);
 		}
+		/* 5g bandsteering configs */
+		if (nvram_wlan_get_int(1, "band_steering"))
+			fprintf(fp, "BandSteering=%d\n", 1);
+		else
+			fprintf(fp, "BandSteering=%d\n", 0);
 #if defined(BOARD_HAS_5G_11AX) && BOARD_HAS_5G_11AX
 		if (i_phy_mode == PHY_11AX_5G) {
 			/* 5g wifi6 mode */
@@ -805,7 +824,7 @@ gen_ralink_config(int is_soc_ap, int is_aband, int disable_autoscan)
 	if (!is_aband)
 		sprintf(list, "%d", 14);
 	else
-		sprintf(list, "%d;%d;%d;%d", 52, 56, 60, 64);
+		sprintf(list, "%d;%d;%d;%d;%d", 132, 136, 140, 144, 165);
 	fprintf(fp, "AutoChannelSkipList=%s\n", list);
 
 	//BasicRate
@@ -1347,7 +1366,7 @@ gen_ralink_config(int is_soc_ap, int is_aband, int disable_autoscan)
 	if (is_aband) {
 		int i_VHTBW_MAX = 0;
 		
-		if (i_phy_mode == PHY_11VHT_N_A_MIXED || i_phy_mode == PHY_11VHT_N_MIXED || i_phy_mode == PHY_11AX_5G)
+		if (i_phy_mode == PHY_11VHT_N_A_MIXED || i_phy_mode == PHY_11VHT_N_MIXED)
 			i_VHTBW_MAX = 1;
 		//VHT_BW
 		i_val = nvram_wlan_get_int(is_aband, "HT_BW");
@@ -1397,14 +1416,14 @@ gen_ralink_config(int is_soc_ap, int is_aband, int disable_autoscan)
 
 	// ITxBfEn
 	if (is_aband) {
-		i_val = nvram_wlan_get_int(1, "txbf");
-		if (i_val > 0 && nvram_wlan_get_int(1, "txbf_en") == 1)
+		i_val = nvram_wlan_get_int(is_aband, "txbf");
+		if (i_val > 0)
 			i_val = 1;
 		else
 			i_val = 0;
 		fprintf(fp, "ITxBfEn=%d\n", i_val);
-		fprintf(fp, "ETxBfEnCond=%d\n", i_val);
-		fprintf(fp, "ITxBfEnCond=%d\n", i_val);
+		fprintf(fp, "ETxBfEnCond=%d;%d\n", i_val, i_val);
+		fprintf(fp, "ITxBfEnCond=%d;%d\n", i_val, i_val);
 	}
 
 	//AccessPolicy0

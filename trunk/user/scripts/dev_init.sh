@@ -6,15 +6,13 @@ mount -t sysfs sysfs /sys
 
 size_tmp="24M"
 size_var="4M"
-size_etc="6M"
-
 if [ "$1" == "-l" ] ; then
 	size_tmp="8M"
 	size_var="1M"
 fi
 
 mount -t tmpfs tmpfs /dev   -o size=8K
-mount -t tmpfs tmpfs /etc   -o size=$size_etc,noatime
+mount -t tmpfs tmpfs /etc   -o size=2M,noatime
 mount -t tmpfs tmpfs /home  -o size=1M
 mount -t tmpfs tmpfs /media -o size=8K
 mount -t tmpfs tmpfs /mnt   -o size=8K
@@ -63,10 +61,15 @@ if [ -f /etc_ro/openssl.cnf ]; then
 	cp -f /etc_ro/openssl.cnf /etc/ssl
 fi
 
+if [ -f /etc_ro/ca-certificates.crt ]; then
+	ln -sf /etc_ro/ca-certificates.crt /etc/ssl/cert.pem
+fi
+
 # create symlinks
 ln -sf /home/root /home/admin
 ln -sf /proc/mounts /etc/mtab
 ln -sf /etc_ro/ethertypes /etc/ethertypes
+ln -sf /etc_ro/netconfig /etc/netconfig
 ln -sf /etc_ro/protocols /etc/protocols
 ln -sf /etc_ro/services /etc/services
 ln -sf /etc_ro/shells /etc/shells
@@ -87,14 +90,7 @@ if [ -f /etc/storage/authorized_keys ] ; then
 	chmod 600 /home/root/.ssh/authorized_keys
 fi
 
-# setup htop default color
-if [ -f /usr/bin/htop ]; then
-	mkdir -p /home/root/.config/htop
-	echo "color_scheme=6" > /home/root/.config/htop/htoprc
-fi
-
 # perform start script
 if [ -x /etc/storage/start_script.sh ] ; then
 	/etc/storage/start_script.sh
 fi
-

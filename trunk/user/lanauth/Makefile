@@ -1,5 +1,5 @@
-CFLAGS+=-Os -Wall -I. $(EXTRACFLAGS)
-LDFLAGS+=-s
+CFLAGS+=-Os -Wall -I. -ffunction-sections -fdata-sections -fvisibility=hidden
+LDFLAGS+=-s -Wl,--gc-sections
 LIBS=md5.o rmd160.o
 
 lanauth: lanauth.o $(LIBS)
@@ -12,5 +12,4 @@ clean:
 	rm -f *.o lanauth
 
 romfs:
-	$(STRIP) lanauth
-	$(ROMFSINST) /usr/sbin/lanauth
+	$(ROMFSINST) lanauth /usr/sbin/lanauth

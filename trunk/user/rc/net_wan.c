@@ -94,15 +94,9 @@ control_wan_led_isp_state(int is_wan_up, int is_modem_unit)
 				has_link = get_wan_ether_link_cached();
 		}
 		LED_CONTROL(BOARD_GPIO_LED_WAN, (is_wan_up && has_link) ? LED_ON : LED_OFF);
-#if defined (BOARD_K2P) || defined (BOARD_PSG1218)
-		LED_CONTROL(BOARD_GPIO_LED_WIFI, (is_wan_up && has_link) ? LED_OFF : LED_ON);
-#endif
 	} else if (front_led_wan == 3) {
 		if (!is_wan_up)
 			LED_CONTROL(BOARD_GPIO_LED_WAN, LED_OFF);
-#if defined (BOARD_K2P) || defined (BOARD_PSG1218)
-		LED_CONTROL(BOARD_GPIO_LED_WIFI, LED_ON);
-#endif
 	}
 #endif
 }
@@ -924,7 +918,7 @@ start_wan(void)
 		    wan_proto == IPV4_WAN_PROTO_L2TP)
 		{
 			char *proto_desc, *ppp_ifname = IFNAME_PPP;
-			int i_pppoe, i_pppoe_man, i_demand;
+			int i_pppoe, i_pppoe_man, i_demand, wan_auth_mode;
 			
 			if (wan_proto == IPV4_WAN_PROTO_PPPOE)
 				proto_desc = "PPPoE";
@@ -940,6 +934,11 @@ start_wan(void)
 			i_pppoe = (wan_proto == IPV4_WAN_PROTO_PPPOE) ? 1 : 0;
 			i_pppoe_man = get_wan_unit_value_int(unit, "pppoe_man");
 			
+			/* Start eapol authenticator */
+			wan_auth_mode = get_wan_unit_value_int(unit, "auth_mode");
+			if (!i_pppoe && wan_auth_mode > 1)
+				start_auth_eapol(wan_ifname, unit, wan_auth_mode - 2);
+
 			if (!i_pppoe || i_pppoe_man == 1)
 				launch_wanx(wan_ifname, unit, !i_pppoe, 0);
 			else if (i_pppoe && i_pppoe_man == 2)

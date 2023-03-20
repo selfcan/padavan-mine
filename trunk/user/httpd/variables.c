@@ -126,16 +126,6 @@
 #if defined (USE_NAND_FLASH)
 			{"mtd_rwfs_mount", "", NULL, FALSE},
 #endif
-#if defined (APP_TTYD)
-			{"ttyd_enable", "", NULL, EVM_RESTART_TTYD},
-			{"ttyd_port", "", NULL, EVM_RESTART_TTYD},
-#endif
-#if defined (APP_VLMCSD)
-			{"vlmcsd_enable", "", NULL, EVM_RESTART_VLMCSD},
-#endif
-#if defined (APP_NAPT66)
-			{"napt66_enable", "", NULL, FALSE},
-#endif
 			{"http_username", "", NULL, EVM_RESTART_CROND|EVM_BLOCK_UNSAFE},
 			{"http_passwd", "", NULL, EVM_BLOCK_UNSAFE},
 			{"modem_rule", "", NULL, EVM_RESTART_MODEM},
@@ -193,6 +183,8 @@
 			{"lprd_enable", "", NULL, EVM_RESTART_SPOOLER},
 			{"rawd_enable", "", NULL, EVM_RESTART_SPOOLER},
 			{"help_enable", "", NULL, FALSE},
+			{"reboot_schedule_enable", "", NULL, FALSE},
+			{"reboot_schedule", "", NULL, FALSE},
 			{"scripts.start_script.sh", "File", NULL, EVM_BLOCK_UNSAFE},
 			{"scripts.started_script.sh", "File", NULL, EVM_BLOCK_UNSAFE},
 			{"scripts.shutdown_script.sh", "File", NULL, EVM_BLOCK_UNSAFE},
@@ -441,7 +433,7 @@
 			{"fw_mac_drop", "", NULL, EVM_RESTART_FIREWALL},
 			{"wan_nat_x", "", NULL, EVM_RESTART_NETFILTER},
 			{"nf_nat_loop", "", NULL, EVM_RESTART_NETFILTER},
-			{"nf_nat_type", "", NULL, EVM_RESTART_SYSCTL},
+			{"nf_nat_type", "", NULL, EVM_RESTART_NETFILTER},
 			{"nf_max_conn", "", NULL, EVM_RESTART_SYSCTL},
 			{"nf_alg_ftp0", "", NULL, EVM_RESTART_FIREWALL},
 			{"nf_alg_ftp1", "", NULL, EVM_RESTART_FIREWALL},
@@ -505,6 +497,7 @@
 			{"dhcp_staticnum_x", "", NULL, EVM_RESTART_DHCPD},
 			{"dnsmasq.hosts", "File", NULL, EVM_RESTART_DHCPD},
 			{"dnsmasq.dnsmasq.conf", "File", NULL, EVM_RESTART_DHCPD},
+			{"dnsmasq.dnsmasq.servers", "File", NULL, EVM_RESTART_DHCPD},
 			{"dnsmasq.dhcp.conf", "File", NULL, EVM_RESTART_DHCPD},
 			{"http_access", "", NULL, EVM_RESTART_HTTPD},
 			{"http_proto", "", NULL, EVM_RESTART_HTTPD},
@@ -519,8 +512,34 @@
 #endif
 			{"telnetd", "", NULL, EVM_RESTART_TELNETD},
 			{"sshd_enable", "", NULL, EVM_RESTART_SSHD},
+			{"sshd_enable_gp", "", NULL, EVM_RESTART_SSHD},
+#if defined(APP_TOR)
+			{"tor_enable", "", NULL, EVM_RESTART_TOR},
+			{"torconf.torrc", "File", NULL, EVM_RESTART_TOR|EVM_BLOCK_UNSAFE},
+#endif
+#if defined(APP_PRIVOXY)
+			{"privoxy_enable", "", NULL, EVM_RESTART_PRIVOXY},
+			{"privoxy.config", "File", NULL, EVM_RESTART_PRIVOXY|EVM_BLOCK_UNSAFE},
+			{"privoxy.user.action", "File", NULL, EVM_RESTART_PRIVOXY|EVM_BLOCK_UNSAFE},
+			{"privoxy.user.filter", "File", NULL, EVM_RESTART_PRIVOXY|EVM_BLOCK_UNSAFE},
+			{"privoxy.user.trust", "File", NULL, EVM_RESTART_PRIVOXY|EVM_BLOCK_UNSAFE},
+#endif
+#if defined(APP_DNSCRYPT)
+			{"dnscrypt_enable", "", NULL, EVM_RESTART_DNSCRYPT},
+			{"dnscrypt_resolver", "", NULL, EVM_RESTART_DNSCRYPT},
+			{"dnscrypt_ipaddr", "", NULL, EVM_RESTART_DNSCRYPT},
+			{"dnscrypt_port", "", NULL, EVM_RESTART_DNSCRYPT},
+			{"dnscrypt_force_dns", "", NULL, EVM_RESTART_FIREWALL},
+			{"dnscrypt_options", "", NULL, EVM_RESTART_DNSCRYPT},
+#endif
+#if defined (SUPPORT_WPAD)
+			{"scripts.wpad.dat", "File", NULL, EVM_BLOCK_UNSAFE},
+#endif
 			{"wins_enable", "", NULL, EVM_RESTART_WINS|EVM_REAPPLY_VPNSVR},
 			{"lltd_enable", "", NULL, EVM_RESTART_LLTD},
+#if defined (SUPPORT_ZRAM)
+			{"zram_enable", "", NULL, EVM_RESTART_ZRAM},
+#endif
 			{"adsc_enable", "", NULL, EVM_RESTART_ADSC},
 			{"crond_enable", "", NULL, EVM_RESTART_CROND},
 			{"crond_log", "", NULL, EVM_RESTART_CROND},
@@ -747,7 +766,7 @@
 #if defined(USE_MT76X2_AP)
 			{"wl_VgaClamp", "", NULL, EVM_RESTART_WIFI5},
 #endif
-#if defined (USE_WID_5G) && (USE_WID_5G==7615 || USE_WID_5G==7915)
+#if defined (USE_WID_5G) && USE_WID_5G==7615
 			{"wl_mumimo", "", NULL, EVM_RESTART_WIFI5},
 #endif
 			{"wl_country_code", "", NULL, EVM_RESTART_WIFI5},
@@ -779,93 +798,11 @@
 			{"wl_guest_mcs_mode", "", NULL, EVM_RESTART_WIFI5},
 			{"wl_KickStaRssiLow", "", NULL, EVM_RESTART_WIFI5},
 			{"wl_AssocReqRssiThres", "", NULL, EVM_RESTART_WIFI5},
+			{"wl_band_steering", "", NULL, EVM_RESTART_WIFI5},
 			{"RBRList", "Group", ARGV((char*)variables_WLANConfig11a_RBRList, "16", "32", "wl_wdsnum_x"), EVM_RESTART_WIFI5},
 #endif
 			{0,0,0,0}
 		};
-
-#if defined (APP_SCUT)
-	struct variable variables_ScutclientConf[] = {
-			{"scutclient_enable", "",NULL, EVM_RESTART_SCUT},
-			{"scutclient_debug","",NULL,EVM_RESTART_SCUT },
-			{"scutclient_username","",NULL,EVM_RESTART_SCUT },
-			{"scutclient_password","",NULL,EVM_RESTART_SCUT },
-			{"scutclient_server_auth_ip","",NULL,EVM_RESTART_SCUT },
-			{"scutclient_version","",NULL,EVM_RESTART_SCUT },
-			{"scutclient_hash","",NULL,EVM_RESTART_SCUT },
-			{"scutclient_hostname","",NULL,EVM_RESTART_SCUT },
-			{"scutclient_watchcat","",NULL,FALSE},
-			{"scutclient_wdg_force","",NULL,FALSE},
-			{"scutclient_skip_udp_hb","",NULL,EVM_RESTART_SCUT},
-			{0,0,0,0}
-	};
-#endif
-
-#if defined (APP_MENTOHUST)
-	struct variable variables_mentohustConf[] = {
-			{"mentohust_enable", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_username", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_password", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_nic", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_ip", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_mask", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_gw", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_dns", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_pinghost", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_timeout", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_interval", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_restart_wait", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_maxfail", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_startmode", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_dhcp", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_daemon", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_ver", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_datafile", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_dhcpscript", "", NULL, EVM_RESTART_MENTOHUST},
-			{"mentohust_service", "", NULL, EVM_RESTART_MENTOHUST},
-			{0,0,0,0}
-	};
-#endif
-
-#if defined(APP_DNSFORWARDER)
-	struct variable variables_dnsforwarderConf[] = {
-			{"dns_forwarder_enable", "", NULL, EVM_RESTART_DNSFORWARDER},
-			{"dns_forwarder_bind", "", NULL, EVM_RESTART_DNSFORWARDER},
-			{"dns_forwarder_port", "", NULL, EVM_RESTART_DNSFORWARDER},
-			{"dns_forwarder_server", "", NULL, EVM_RESTART_DNSFORWARDER},
-			{0,0,0,0}
-	};
-#endif
-
-#if defined(APP_SHADOWSOCKS)
-	struct variable variables_ShadowsocksConf[] = {
-			{"ss_enable","",NULL, EVM_RESTART_SHADOWSOCKS},
-			{"ss_type","",NULL, EVM_RESTART_SHADOWSOCKS|EVM_RESTART_SS_TUNNEL},
-			{"ss_mode","",NULL, EVM_RESTART_SHADOWSOCKS},
-			{"ss_server","",NULL, EVM_RESTART_SHADOWSOCKS|EVM_RESTART_SS_TUNNEL},
-			{"ss_server_port","",NULL, EVM_RESTART_SHADOWSOCKS|EVM_RESTART_SS_TUNNEL},
-			{"ss_key","",NULL, EVM_RESTART_SHADOWSOCKS|EVM_RESTART_SS_TUNNEL},
-			{"ss_method","",NULL, EVM_RESTART_SHADOWSOCKS|EVM_RESTART_SS_TUNNEL},
-			{"ss_udp","",NULL, EVM_RESTART_SHADOWSOCKS},
-			{"ss_local_port","",NULL, EVM_RESTART_SHADOWSOCKS},
-			{"ss_mtu","",NULL, EVM_RESTART_SHADOWSOCKS},
-			{"ss_router_proxy","",NULL, EVM_RESTART_SHADOWSOCKS},
-			{"ss_lower_port_only","",NULL, EVM_RESTART_SHADOWSOCKS},
-			{"ss_timeout","",NULL, EVM_RESTART_SHADOWSOCKS|EVM_RESTART_SS_TUNNEL},
-			{"ss_protocol","",NULL, EVM_RESTART_SHADOWSOCKS|EVM_RESTART_SS_TUNNEL},
-			{"ss_proto_param","",NULL, EVM_RESTART_SHADOWSOCKS|EVM_RESTART_SS_TUNNEL},
-			{"ss_obfs","",NULL, EVM_RESTART_SHADOWSOCKS|EVM_RESTART_SS_TUNNEL},
-			{"ss_obfs_param","",NULL, EVM_RESTART_SHADOWSOCKS|EVM_RESTART_SS_TUNNEL},
-			{"ss_watchcat","",NULL, FALSE},
-			{"ss_update_chnroute","",NULL, FALSE},
-			{"ss_update_gfwlist","",NULL, FALSE},
-			{"ss-tunnel_enable","",NULL, EVM_RESTART_SS_TUNNEL},
-			{"ss-tunnel_local_port","",NULL, EVM_RESTART_SS_TUNNEL},
-			{"ss-tunnel_remote","",NULL, EVM_RESTART_SS_TUNNEL},
-			{"ss-tunnel_mtu","",NULL, EVM_RESTART_SS_TUNNEL},
-			{0,0,0,0}
-	};
-#endif
 
 	struct variable variables_WLANConfig11b[] = {
 			{"rt_ssid", "", NULL, EVM_RESTART_WIFI2},
@@ -921,8 +858,9 @@
 #if defined(USE_MT76X2_AP)
 			{"rt_VgaClamp", "", NULL, EVM_RESTART_WIFI2},
 #endif
-#if defined (USE_WID_2G) && (USE_WID_2G==7615 || USE_WID_2G==7915)
+#if defined (USE_WID_2G) && USE_WID_2G==7615
 			{"rt_turbo_qam", "", NULL, EVM_RESTART_WIFI2},
+			{"rt_airtimefairness", "", NULL, EVM_RESTART_WIFI2},
 #endif
 			{"rt_country_code", "", NULL, EVM_RESTART_WIFI2},
 			{"rt_stream_tx", "", NULL, EVM_RESTART_WIFI2},
@@ -955,6 +893,7 @@
 			{"rt_guest_mcs_mode", "", NULL, EVM_RESTART_WIFI2},
 			{"rt_KickStaRssiLow", "", NULL, EVM_RESTART_WIFI2},
 			{"rt_AssocReqRssiThres", "", NULL, EVM_RESTART_WIFI2},
+			{"rt_band_steering", "", NULL, EVM_RESTART_WIFI2},
 			{"rt_RBRList", "Group", ARGV((char*)variables_WLANConfig11b_rt_RBRList, "16", "32", "rt_wdsnum_x"), EVM_RESTART_WIFI2},
 			{0,0,0,0}
 		};
@@ -977,18 +916,6 @@
 		{"DeviceSecurity11b",		variables_DeviceSecurity11b},
 		{"WLANAuthentication11a",	variables_WLANAuthentication11a},
 		{"WLANAuthentication11b",	variables_WLANAuthentication11b},
-#if defined(APP_DNSFORWARDER)
-		{"dnsforwarderConf",		variables_dnsforwarderConf},
-#endif
-#if defined(APP_SCUT)
-		{"ScutclientConf",		variables_ScutclientConf},
-#endif
-#if defined(APP_MENTOHUST)
-		{"mentohustConf",		variables_mentohustConf},
-#endif
-#if defined(APP_SHADOWSOCKS)
-		{"ShadowsocksConf",		variables_ShadowsocksConf},
-#endif
 		{"LANGUAGE",			variables_Language},
 		{0,0}
 	};
@@ -1007,8 +934,16 @@
 		{EVM_RESTART_VPNCLI,		EVT_RESTART_VPNCLI,		RCN_RESTART_VPNCLI,	EVM_RESTART_FIREWALL},
 		{EVM_RESTART_HTTPD,		EVT_RESTART_HTTPD,		RCN_RESTART_HTTPD,	EVM_RESTART_FIREWALL},
 		{EVM_RESTART_SSHD,		EVT_RESTART_SSHD,		RCN_RESTART_SSHD,	EVM_RESTART_FIREWALL},
+#if defined(APP_TOR)
+		{EVM_RESTART_TOR,		EVT_RESTART_TOR,		RCN_RESTART_TOR,	EVM_RESTART_FIREWALL},
+#endif
+#if defined(APP_PRIVOXY)
+		{EVM_RESTART_PRIVOXY,		EVT_RESTART_PRIVOXY,		RCN_RESTART_PRIVOXY,	EVM_RESTART_FIREWALL},
+#endif
+#if defined(APP_DNSCRYPT)
+		{EVM_RESTART_DNSCRYPT,		EVT_RESTART_DNSCRYPT,		RCN_RESTART_DNSCRYPT,	EVM_RESTART_FIREWALL},
+#endif
 		{EVM_RESTART_TELNETD,		EVT_RESTART_TELNETD,		RCN_RESTART_TELNETD,	0},
-
 #if defined(APP_SMBD) || defined(APP_NMBD)
 		{EVM_RESTART_WINS,		EVT_RESTART_WINS,		RCN_RESTART_WINS,	EVM_RESTART_DHCPD|EVM_RESTART_NMBD|EVM_REAPPLY_VPNSVR},
 #endif
@@ -1021,6 +956,9 @@
 		{EVM_RESTART_TIME,		EVT_RESTART_TIME,		RCN_RESTART_TIME,	EVM_RESTART_CROND},
 		{EVM_RESTART_NTPC,		EVT_RESTART_NTPC,		RCN_RESTART_NTPC,	0},
 		{EVM_RESTART_SYSLOG,		EVT_RESTART_SYSLOG,		RCN_RESTART_SYSLOG,	0},
+#if defined(SUPPORT_ZRAM)
+		{EVM_RESTART_ZRAM,		EVT_RESTART_ZRAM,		RCN_RESTART_ZRAM,	0},
+#endif
 		{EVM_RESTART_LLTD,		EVT_RESTART_LLTD,		RCN_RESTART_LLTD,	0},
 		{EVM_RESTART_ADSC,		EVT_RESTART_ADSC,		RCN_RESTART_ADSC,	0},
 		{EVM_RESTART_CROND,		EVT_RESTART_CROND,		RCN_RESTART_CROND,	0},
@@ -1052,25 +990,6 @@
 #if defined(APP_ARIA)
 		{EVM_RESTART_ARIA,		EVT_RESTART_ARIA,		RCN_RESTART_ARIA,	EVM_RESTART_FIREWALL},
 #endif
-#endif
-#if defined(APP_SCUT)
-		{EVM_RESTART_SCUT,		EVT_RESTART_SCUT,		RCN_RESTART_SCUT,	0},
-#endif
-#if defined(APP_MENTOHUST)
-		{EVM_RESTART_MENTOHUST,		EVT_RESTART_MENTOHUST,		RCN_RESTART_MENTOHUST,	0},
-#endif
-#if defined(APP_TTYD)
-		{EVM_RESTART_TTYD,		EVT_RESTART_TTYD,		RCN_RESTART_TTYD,	0},
-#endif
-#if defined(APP_VLMCSD)
-		{EVM_RESTART_VLMCSD,	EVT_RESTART_VLMCSD,		RCN_RESTART_VLMCSD,	0},
-#endif
-#if defined(APP_DNSFORWARDER)
-		{EVM_RESTART_DNSFORWARDER,	EVT_RESTART_DNSFORWARDER,	RCN_RESTART_DNSFORWARDER, 0},
-#endif
-#if defined(APP_SHADOWSOCKS)
-		{EVM_RESTART_SHADOWSOCKS,	EVT_RESTART_SHADOWSOCKS,	RCN_RESTART_SHADOWSOCKS,  0},
-		{EVM_RESTART_SS_TUNNEL,		EVT_RESTART_SS_TUNNEL,		RCN_RESTART_SS_TUNNEL,	  0},
 #endif
 #if defined(APP_SMBD) || defined(APP_NMBD)
 		{EVM_RESTART_NMBD,		EVT_RESTART_NMBD,		RCN_RESTART_NMBD,	0},

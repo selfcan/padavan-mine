@@ -128,7 +128,7 @@ struct pptp_header {
 	u_int32_t magic;		/* magic cookie */
 	u_int16_t ctrl_type;		/* control message type */
 	u_int16_t reserved0;		/* reserved */
-};
+}__attribute__((packed));
 
 struct pptp_start_ctrl_conn_rqst {
 	struct pptp_header header;	/* pptp header */
@@ -140,7 +140,7 @@ struct pptp_start_ctrl_conn_rqst {
 	u_int16_t firmware_rev;		/* firmware revision */
 	u_int8_t hostname[MAX_HOSTNAME_SIZE];	/* hostname */
 	u_int8_t vendor[MAX_VENDOR_SIZE];	/* vendor */
-};
+}__attribute__((packed));
 
 struct pptp_start_ctrl_conn_rply {
 	struct pptp_header header;	/* pptp header */
@@ -153,26 +153,26 @@ struct pptp_start_ctrl_conn_rply {
 	u_int16_t firmware_rev;		/* firmware revision */
 	u_int8_t hostname[MAX_HOSTNAME_SIZE];	/* hostname */
 	u_int8_t vendor[MAX_VENDOR_SIZE];	/* vendor */
-};
+}__attribute__((packed));
 
 struct pptp_stop_ctrl_conn_rqst {
 	struct pptp_header header;	/* header */
 	u_int8_t reason;		/* reason for closing */
 	u_int8_t reserved1;		/* reserved */
 	u_int16_t reserved2;		/* reserved */
-};
+}__attribute__((packed));
 
 struct pptp_stop_ctrl_conn_rply {
 	struct pptp_header header;	/* header */
 	u_int8_t result_code;		/* result code */
 	u_int8_t error_code;		/* error code */
 	u_int16_t reserved1;		/* reserved */
-};
+}__attribute__((packed));
 
 struct pptp_echo_rqst {
 	struct pptp_header header;	/* header */
 	u_int32_t identifier;		/* value to match rply with rqst */
-};
+}__attribute__((packed));
 
 struct pptp_echo_rply {
 	struct pptp_header header;	/* header */
@@ -180,7 +180,7 @@ struct pptp_echo_rply {
 	u_int8_t result_code;		/* result code */
 	u_int8_t error_code;		/* error code */
 	u_int16_t reserved1;		/* reserved */
-};
+}__attribute__((packed));
 
 struct pptp_out_call_rqst {
 	struct pptp_header header;	/* header */
@@ -196,7 +196,7 @@ struct pptp_out_call_rqst {
 	u_int16_t reserved1;		/* reserved */
 	u_int8_t phone_num[64];		/* phone number */
 	u_int8_t subaddress[64];	/* additional dialing info */
-};
+}__attribute__((packed));
 
 struct pptp_out_call_rply {
 	struct pptp_header header;	/* header */
@@ -209,7 +209,7 @@ struct pptp_out_call_rply {
 	u_int16_t pckt_recv_size;	/* packet recv window size */
 	u_int16_t pckt_delay;		/* packet processing delay */
 	u_int32_t channel_id;		/* physical channel ID */
-};
+}__attribute__((packed));
 
 struct pptp_in_call_rqst {
 	struct pptp_header header;	/* header */
@@ -222,7 +222,7 @@ struct pptp_in_call_rqst {
 	u_int8_t dialed_num[64];	/* number that was dialed by the caller */
 	u_int8_t dialing_num[64];	/* the number from which the call was placed */
 	u_int8_t subaddress[64];	/* additional dialing information */
-};
+}__attribute__((packed));
 
 struct pptp_in_call_rply {
 	struct pptp_header header;	/* header */
@@ -233,7 +233,7 @@ struct pptp_in_call_rply {
 	u_int16_t pckt_recv_size;	/* packet recv window size */
 	u_int16_t pckt_delay;		/* packet transmit delay */
 	u_int16_t reserved1;		/* reserved */
-};
+}__attribute__((packed));
 
 struct pptp_in_call_connect {
 	struct pptp_header header;	/* header */
@@ -243,13 +243,13 @@ struct pptp_in_call_connect {
 	u_int16_t pckt_recv_size;	/* packet rcvd window size */
 	u_int16_t pckt_delay;		/* packet transmit delay */
 	u_int32_t framing_type;		/* framing type */
-};
+}__attribute__((packed));
 
 struct pptp_call_clr_rqst {
 	struct pptp_header header;	/* header */
 	u_int16_t call_id;		/* call ID assigned by the PNS */
 	u_int16_t reserved1;		/* reserved */
-};
+}__attribute__((packed));
 
 struct pptp_call_disconn_ntfy {
 	struct pptp_header header;	/* header */
@@ -259,7 +259,7 @@ struct pptp_call_disconn_ntfy {
 	u_int16_t cause_code;		/* additional disconnect info */
 	u_int16_t reserved1;		/* reserved */
 	u_int8_t call_stats[128];	/* vendor specific call stats */
-};
+}__attribute__((packed));
 
 struct pptp_wan_err_ntfy {
 	struct pptp_header header;	/* header */
@@ -271,7 +271,7 @@ struct pptp_wan_err_ntfy {
 	u_int32_t buff_overruns;	/* # of buffer overruns */
 	u_int32_t timeout_errors;	/* # of timeouts */
 	u_int32_t align_errors;		/* # of alignment errors */
-};
+}__attribute__((packed));
 
 struct pptp_set_link_info {
 	struct pptp_header header;
@@ -279,7 +279,7 @@ struct pptp_set_link_info {
 	u_int16_t reserved1;		/* reserved */
 	u_int32_t send_accm;		/* send ACCM value the client should use */
 	u_int32_t recv_accm;		/* recv ACCM value the client should use */
-};
+}__attribute__((packed));
 
 /* GRE and PPP structs */
 
@@ -312,7 +312,7 @@ struct pptp_gre_header {
 	u_int32_t seq;		/* sequence number.  Present if S==1 */
 	u_int32_t ack;		/* seq number of highest packet recieved by */
 	/* sender in this session */
-};
+}__attribute__((packed));
 
 /* For our call ID pairs */
 #define PNS_VALUE 0

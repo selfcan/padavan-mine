@@ -65,6 +65,8 @@
 #define VPN_CLIENT_PPPD_OPTIONS		"/tmp/ppp/options.vpnc"
 #define VPN_CLIENT_UPDOWN_SCRIPT	"/etc/storage/vpnc_server_script.sh"
 
+#define WPAD_DAT_SCRIPT				"/etc/storage/wpad.dat"
+
 #define IPT_CHAIN_NAME_VPN_LIST		"vpnlist"
 #define IPT_CHAIN_NAME_MAC_LIST		"maclist"
 #define IPT_CHAIN_NAME_URL_LIST		"urllist"
@@ -513,45 +515,30 @@ int start_services_once(int is_ap_mode);
 void stop_services(int stopall);
 void stop_services_lan_wan(void);
 void stop_misc(void);
-#if defined(APP_SCUT)
-int is_scutclient_run(void);
-void stop_scutclient(void);
-void start_scutclient(void);
-void restart_scutclient(void);
+
+#if defined(SUPPORT_ZRAM)
+int get_zram_disksize(void);
+void stop_zram(void);
+void start_zram(void);
+void restart_zram(void);
 #endif
-#if defined(APP_MENTOHUST)
-int is_mentohust_run(void);
-void stop_mentohust(void);
-void start_mentohust(void);
-void restart_mentohust(void);
+#if defined(APP_TOR)
+int is_tor_run(void);
+void stop_tor(void);
+void start_tor(void);
+void restart_tor(void);
 #endif
-#if defined(APP_TTYD)
-void stop_ttyd(void);
-void start_ttyd(void);
-void restart_ttyd(void);
+#if defined(APP_PRIVOXY)
+int is_privoxy_run(void);
+void stop_privoxy(void);
+void start_privoxy(void);
+void restart_privoxy(void);
 #endif
-#if defined(APP_SHADOWSOCKS)
-void stop_ss(void);
-void start_ss(void);
-void restart_ss(void);
-void stop_ss_tunnel(void);
-void start_ss_tunnel(void);
-void restart_ss_tunnel(void);
-void update_chnroute(void);
-void update_gfwlist(void);
-#endif
-#if defined(APP_VLMCSD)
-void stop_vlmcsd(void);
-void start_vlmcsd(void);
-void restart_vlmcsd(void);
-#endif
-#if defined(APP_NAPT66)
-void start_napt66(void);
-#endif
-#if defined(APP_DNSFORWARDER)
-void stop_dnsforwarder(void);
-void start_dnsforwarder(void);
-void restart_dnsforwarder(void);
+#if defined(APP_DNSCRYPT)
+int is_dnscrypt_run(void);
+void stop_dnscrypt(void);
+void start_dnscrypt(void);
+void restart_dnscrypt(void);
 #endif
 
 /* services_ex.c */
