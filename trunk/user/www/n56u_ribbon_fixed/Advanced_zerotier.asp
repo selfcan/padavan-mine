@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title><#Web_Title#> - <#menu5_32#></title>
+<title><#Web_Title#> - <#menu5_17_4#></title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="-1">
@@ -35,7 +35,7 @@ $j(document).ready(function() {
 
 </script>
 <script>
-<% zerotier_status(); %>
+
 <% login_state_hook(); %>
 
 var m_list = [<% get_nvram_list("ZeroConf", "ZeroList"); %>];
@@ -49,39 +49,29 @@ if(m_list.length > 0){
 var isMenuopen = 0;
 function initial(){
 	show_banner(2);
-	show_menu(5,17,0);
-	showmenu();
-	fill_status(zerotier_status());
-	showMRULESList();
+	show_menu(5,15,4);
+showmenu();
+showMRULESList();
 	show_footer();
-}
 
+}
 function showmenu(){
 showhide_div('allink', found_app_aliddns());
-showhide_div('dtolink', found_app_ddnsto());
-showhide_div('wirlink', found_app_wireguard());
 }
 function applyRule(){
-	showLoading();
-	
-	document.form.action_mode.value = " Restart ";
-	document.form.current_page.value = "/Advanced_zerotier.asp";
-	document.form.next_page.value = "";
-	
-	document.form.submit();
+//	if(validForm()){
+		showLoading();
+		
+		document.form.action_mode.value = " Restart ";
+		document.form.current_page.value = "/Advanced_zerotier.asp";
+		document.form.next_page.value = "";
+		
+		document.form.submit();
+//	}
 }
 
 function done_validating(action){
 	refreshpage();
-}
-
-function fill_status(status_code){
-	var stext = "Unknown";
-	if (status_code == 0)
-		stext = "<#Stopped#>";
-	else if (status_code == 1)
-		stext = "<#Running#>";
-	$("zerotier_status").innerHTML = '<span class="label label-' + (status_code != 0 ? 'success' : 'warning') + '">' + stext + '</span>';
 }
 
 function markGroupRULES(o, c, b) {
@@ -197,35 +187,16 @@ function showMRULESList(){
 				<div class="row-fluid">
 					<div class="span12">
 						<div class="box well grad_colour_dark_blue">
-							<h2 class="box_head round_top"><#menu5_32#> - <#menu5_30#></h2>
+							<h2 class="box_head round_top"><#menu5_17#> - <#menu5_17_4#></h2>
 							<div class="round_bottom">
-							<div>
-							    <ul class="nav nav-tabs" style="margin-bottom: 10px;">
-								<li id="allink" style="display:none">
-								    <a href="Advanced_aliddns.asp"><#menu5_23_1#></a>
-								</li>
-								<li id="dtolink" style="display:none">
-								    <a href="Advanced_ddnsto.asp"><#menu5_32_2#></a>
-								</li>
-								<li class="active">
-								    <a href="Advanced_zerotier.asp"><#menu5_32_1#></a>
-								</li>
-								<li id="wirlink" style="display:none">
-								    <a href="Advanced_wireguard.asp"><#menu5_35_1#></a>
-								</li>
-							    </ul>
-							</div>
 								<div class="row-fluid">
 									<div id="tabMenu" class="submenuBlock"></div>
 									<div class="alert alert-info" style="margin: 10px;">
-									<p>Zerotier是一个开源，跨平台，而且适合内网穿透异地组网的傻瓜配置虚拟 VPN LAN<br>
+									<p>Zerotier是一个开源，跨平台，而且适合内网穿透互联的傻瓜配置虚拟 VPN LAN<br>
 									</p>
 									</div>
 
 									<table width="100%" align="center" cellpadding="4" cellspacing="0" class="table">
-									<tr> <th><#running_status#></th>
-                                            <td id="zerotier_status" colspan="3"></td>
-                                        </tr>
 										<tr>
 											<th width="30%" style="border-top: 0 none;">启用ZeroTier客户端</th>
 											<td style="border-top: 0 none;">
@@ -264,7 +235,7 @@ function showMRULESList(){
 													<input type="radio" value="1" name="zerotier_nat" id="zerotier_nat_1" class="input" value="1" <% nvram_match_x("", "zerotier_nat", "1", "checked"); %> /><#checkbox_Yes#>
 													<input type="radio" value="0" name="zerotier_nat" id="zerotier_nat_0" class="input" value="0" <% nvram_match_x("", "zerotier_nat", "0", "checked"); %> /><#checkbox_No#>
 												</div>
-												 允许Zerotier的拨入客户端访问路由器LAN资源,自动添加路由表（需要在 Zerotier管理页面设定到LAN网段的路由表）
+												 允许Zerotier的拨入客户端访问路由器LAN资源（需要在 Zerotier管理页面设定到LAN网段的路由表）
 											</td>
 
 										</tr>
@@ -305,7 +276,7 @@ function showMRULESList(){
 										</tr>
 									</table>
 <table width="100%" align="center" cellpadding="4" cellspacing="0" class="table">
-	<tr> <th colspan="4">需要访问其它zerotier的内网LAN网段,IP和网关和zerotier后台对应即可(本机的LAN网段不用填进去,开启自动NAT客户端zerotier官网添加过的这里就不用添加了)</th></tr>
+	<tr> <th colspan="4">需要访问其它zerotier的内网LAN网段,IP和网关和zerotier后台对应即可(本机的LAN网段不用填进去)</th></tr>
                                         <tr id="row_rules_caption">
 										 
                                             <th width="10%">
@@ -366,3 +337,4 @@ function showMRULESList(){
 </div>
 </body>
 </html>
+

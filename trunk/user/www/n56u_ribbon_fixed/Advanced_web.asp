@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title><#Web_Title#> - 菜单设置</title>
+<title><#Web_Title#> - <#menu5_22_1#></title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="-1">
@@ -25,7 +25,7 @@
 var $j = jQuery.noConflict();
 
 $j(document).ready(function() {
-    init_itoggle('w_ai');
+	init_itoggle('w_ai');
 	init_itoggle('w_vpn_s');
 	init_itoggle('w_vpn_c');
 	init_itoggle('w_wnet');
@@ -43,7 +43,6 @@ $j(document).ready(function() {
 	init_itoggle('w_frp');
 	init_itoggle('w_caddy');
 	init_itoggle('w_wyy');
-	init_itoggle('w_aldriver');
 
 });
 </script>
@@ -56,28 +55,28 @@ function initial(){
 	if (!login_safe())
 		textarea_scripts_enabled(0);
 		//load_body();
-	if (found_app_shadowsocks()){
+if (found_app_shadowsocks()){
 	showhide_div('row_wss', true);
 }
-if (found_app_scutclient()){
+if (found_app_scutclient() || found_app_mentohust()){
 	showhide_div('row_wscu', true);
 }
-if (found_app_dnsforwarder()){
+if (found_app_dnsforwarder() || found_app_smartdns()){
 	showhide_div('row_wdnsf', true);
 }
-if (found_app_mentohust()){
-	showhide_div('row_wmen', true);
-}
-if (found_app_adbyby() || found_app_koolproxy()){
+//if (found_app_mentohust()){
+//	showhide_div('row_wmen', true);
+//}
+if (found_app_adbyby() || found_app_koolproxy() || found_app_adguardhome()){
 	showhide_div('row_wadbyby', true);
 }
-if (found_app_smartdns() || found_app_adguardhome()){
-	showhide_div('row_wpdnsd', true);
-}
-if (found_app_aliddns() || found_app_ddnsto() || found_app_zerotier() || found_app_wireguard()){
-	showhide_div('row_waliddns', true);
-}
-if (found_app_frp()){
+//if (found_app_smartdns() || found_app_adguardhome()){
+//	showhide_div('row_wpdnsd', true);
+//}
+//if (found_app_aliddns() || found_app_zerotier()){
+//	showhide_div('row_waliddns', true);
+//}
+if (found_app_frp() || found_app_npc() || found_app_aliddns() || found_app_zerotier()){
 	showhide_div('row_wfrp', true);
 }
 if (found_app_caddy()){
@@ -85,9 +84,6 @@ if (found_app_caddy()){
 }
 if (found_app_wyy()){
 	showhide_div('row_wwyy', true);
-}
-if (found_app_aldriver()){
-	showhide_div('row_waldriver', true);
 }
 }
 
@@ -150,16 +146,16 @@ function applyRule(){
 				<div class="row-fluid">
 					<div class="span12">
 						<div class="box well grad_colour_dark_blue">
-							<h2 class="box_head round_top">自定义菜单选项</h2>
+							<h2 class="box_head round_top"><#menu5_10#> - <#menu5_22_1#></h2>
 							<div class="round_bottom">
 								<div class="row-fluid">
 									<div id="tabMenu" class="submenuBlock"></div>
-									<div class="alert alert-info" style="margin: 10px;">把你不想在网页上显示的菜单选项关闭，适用于重度强迫症......<br />
-									<div>此选项只能屏蔽页面的显示，并不会删除程序。</div>
+									<div class="alert alert-info" style="margin: 10px;">关闭网页上显示的菜单选项，<br />
+									<div>此选项只屏蔽页面的显示，并不会删除程序。</div>
 									</div>
 									<table width="100%" align="center" cellpadding="4" cellspacing="0" class="table">
 										<tr >
-											<th width="50%">VPN服务器</th>
+											<th width="50%"><#menu2#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_vpn_s_on_of">
@@ -173,7 +169,7 @@ function applyRule(){
 											</td>
 										</tr>
 																				<tr >
-											<th width="50%">VPN客户端</th>
+											<th width="50%"><#menu6#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_vpn_c_on_of">
@@ -187,7 +183,7 @@ function applyRule(){
 											</td>
 										</tr>
 										<tr >
-											<th width="50%">网络流量</th>
+											<th width="50%"><#menu4#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_wnet_on_of">
@@ -201,7 +197,7 @@ function applyRule(){
 											</td>
 										</tr>
 										<tr >
-											<th width="50%">系统信息</th>
+											<th width="50%"><#menu5_8#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_sys_on_of">
@@ -215,7 +211,7 @@ function applyRule(){
 											</td>
 										</tr>
 										<tr >
-											<th width="50%">USB应用</th>
+											<th width="50%"><#menu5_4#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_usb_on_of">
@@ -229,7 +225,7 @@ function applyRule(){
 											</td>
 										</tr>
 										<tr >
-											<th width="50%">网络信息</th>
+											<th width="50%"><#menu5_9#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_net_on_of">
@@ -243,7 +239,7 @@ function applyRule(){
 											</td>
 										</tr>
 										<tr >
-											<th width="50%">系统日志</th>
+											<th width="50%"><#menu5_7#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_log_on_of">
@@ -257,7 +253,7 @@ function applyRule(){
 											</td>
 										</tr>
 										<tr id="row_wscu" style="display:none">
-											<th width="50%">Scutclient</th>
+											<th width="50%"><#menu5_13#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_scu_on_of">
@@ -272,7 +268,7 @@ function applyRule(){
 										</tr>
 										
 										<tr id="row_wdnsf" style="display:none">
-											<th width="50%" >DNS-forwarder</th>
+											<th width="50%" ><#menu5_14#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_dnsf_on_of">
@@ -285,8 +281,22 @@ function applyRule(){
 												</div>
 											</td>
 										</tr>
+										<tr id="row_wadbyby" style="display:none">
+											<th width="50%"><#menu5_15#></th>
+											<td>
+													<div class="main_itoggle">
+													<div id="w_adbyby_on_of">
+														<input type="checkbox" id="w_adbyby_fake" <% nvram_match_x("", "w_adbyby", "1", "value=1 checked"); %><% nvram_match_x("", "w_adbyby", "0", "value=0"); %>  />
+													</div>
+												</div>
+												<div style="position: absolute; margin-left: -10000px;">
+													<input type="radio" value="1" name="w_adbyby" id="w_adbyby_1" class="input" <% nvram_match_x("", "w_adbyby", "1", "checked"); %> /><#checkbox_Yes#>
+													<input type="radio" value="0" name="w_adbyby" id="w_adbyby_0" class="input" <% nvram_match_x("", "w_adbyby", "0", "checked"); %> /><#checkbox_No#>
+												</div>
+											</td>
+										</tr>
 										<tr id="row_wss" style="display:none">
-											<th width="50%">科学上网</th>
+											<th width="50%"><#menu5_16#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_ss_on_of">
@@ -313,20 +323,6 @@ function applyRule(){
 												</div>
 											</td>
 										</tr>
-										<tr id="row_wadbyby" style="display:none">
-											<th width="50%">广告管理</th>
-											<td>
-													<div class="main_itoggle">
-													<div id="w_adbyby_on_of">
-														<input type="checkbox" id="w_adbyby_fake" <% nvram_match_x("", "w_adbyby", "1", "value=1 checked"); %><% nvram_match_x("", "w_adbyby", "0", "value=0"); %>  />
-													</div>
-												</div>
-												<div style="position: absolute; margin-left: -10000px;">
-													<input type="radio" value="1" name="w_adbyby" id="w_adbyby_1" class="input" <% nvram_match_x("", "w_adbyby", "1", "checked"); %> /><#checkbox_Yes#>
-													<input type="radio" value="0" name="w_adbyby" id="w_adbyby_0" class="input" <% nvram_match_x("", "w_adbyby", "0", "checked"); %> /><#checkbox_No#>
-												</div>
-											</td>
-										</tr>
 										<tr id="row_wpdnsd" style="display:none">
 											<th width="50%" >DNS服务</th>
 											<td>
@@ -342,7 +338,7 @@ function applyRule(){
 											</td>
 										</tr>
 										<tr id="row_waliddns" style="display:none">
-											<th width="50%" >穿透服务</th>
+											<th width="50%">穿透服务</th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_aliddns_on_of">
@@ -356,7 +352,7 @@ function applyRule(){
 											</td>
 										</tr>
 										<tr id="row_wfrp" style="display:none">
-											<th width="50%" >内网穿透</th>
+											<th width="50%"><#menu5_17#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_frp_on_of">
@@ -370,7 +366,7 @@ function applyRule(){
 											</td>
 										</tr>
 										<tr id="row_wcaddy" style="display:none">
-											<th width="50%" >文件管理</th>
+											<th width="50%"><#menu5_18#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_caddy_on_of">
@@ -384,7 +380,7 @@ function applyRule(){
 											</td>
 										</tr>
 										<tr id="row_wwyy" style="display:none">
-											<th width="50%" >音乐解锁</th>
+											<th width="50%"><#menu5_19#></th>
 											<td>
 													<div class="main_itoggle">
 													<div id="w_wyy_on_of">
@@ -397,22 +393,6 @@ function applyRule(){
 												</div>
 											</td>
 										</tr>
-										<tr id="row_waldriver" style="display:none">
-											<th width="50%" >阿里云盘</th>
-											<td>
-													<div class="main_itoggle">
-													<div id="w_aldriver_on_of">
-														<input type="checkbox" id="w_aldriver_fake" <% nvram_match_x("", "w_wyy", "1", "value=1 checked"); %><% nvram_match_x("", "w_aldriver", "0", "value=0"); %>  />
-													</div>
-												</div>
-												<div style="position: absolute; margin-left: -10000px;">
-													<input type="radio" value="1" name="w_aldriver" id="w_aldriver_1" class="input" <% nvram_match_x("", "w_aldriver", "1", "checked"); %> /><#checkbox_Yes#>
-													<input type="radio" value="0" name="w_aldriver" id="w_aldriver_0" class="input" <% nvram_match_x("", "w_aldriver", "0", "checked"); %> /><#checkbox_No#>
-												</div>
-											</td>
-										</tr>
-										
-									
 											<td colspan="2">
 												<br />
 												<center><input class="btn btn-primary" style="width: 219px" type="button" value="<#CTL_apply#>" onclick="applyRule()" /></center>

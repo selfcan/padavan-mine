@@ -1,18 +1,18 @@
-SRC_NAME = htop-3.2.1
-SRC_URL = http://sources.buildroot.net/htop/htop-3.2.1.tar.xz
+SRC_NAME = htop-3.0.2
+SRC_URL = https://bintray.com/htop/source/download_file?file_path=htop-3.0.2.tar.gz
 THISDIR = $(shell pwd)
 
 all: download_test extract_test config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 download_test:
-	( if [ ! -f $(SRC_NAME).tar.xz ]; then \
-		wget -t5 --timeout=20 --no-check-certificate -O $(SRC_NAME).tar.xz $(SRC_URL); \
+	( if [ ! -f $(SRC_NAME).tar.gz ]; then \
+		wget -t5 --timeout=20 --no-check-certificate -O $(SRC_NAME).tar.gz $(SRC_URL); \
 	fi )
 
 extract_test:
 	( if [ ! -d $(SRC_NAME) ]; then \
-		tar -xf $(SRC_NAME).tar.xz; \
+		tar -xzf $(SRC_NAME).tar.gz; \
 	fi )
 
 config_test:
@@ -24,7 +24,6 @@ config_test:
 
 configure:
 	( cd $(SRC_NAME) ; \
-	./autogen.sh ; \
 	./configure \
 		--prefix=/usr \
 		--enable-unicode \

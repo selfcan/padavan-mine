@@ -2334,47 +2334,11 @@ static int frps_status_hook(int eid, webs_t wp, int argc, char **argv)
 }
 #endif
 
-/*#if defined (APP_NPC)
+#if defined (APP_NPC)
 static int npc_status_hook(int eid, webs_t wp, int argc, char **argv)
 {
 	int npc_status_code = pids("npc");
 	websWrite(wp, "function npc_status() { return %d;}\n", npc_status_code);
-	return 0;
-}
-#endif*/
-
-#if defined (APP_DDNSTO)
-static int ddnsto_status_hook(int eid, webs_t wp, int argc, char **argv)
-{
-	int ddnsto_status_code = pids("ddnsto");
-	websWrite(wp, "function ddnsto_status() { return %d;}\n", ddnsto_status_code);
-	return 0;
-}
-#endif
-
-#if defined (APP_NVPPROXY)
-static int nvpproxy_status_hook(int eid, webs_t wp, int argc, char **argv)
-{
-	int nvpproxy_status_code = pids("nvpproxy");
-	websWrite(wp, "function nvpproxy_status() { return %d;}\n", nvpproxy_status_code);
-	return 0;
-}
-#endif
-
-#if defined (APP_SHADOWSOCKS)
-static int dns2tcp_status_hook(int eid, webs_t wp, int argc, char **argv)
-{
-	int dns2tcp_status_code = pids("dns2tcp");
-	websWrite(wp, "function dns2tcp_status() { return %d;}\n", dns2tcp_status_code);
-	return 0;
-}
-#endif
-
-#if defined (APP_ALDRIVER)
-static int aliyundrive_status_hook(int eid, webs_t wp, int argc, char **argv)
-{
-	int aliyundrive_status_code = pids("aliyundrive-webdav");
-	websWrite(wp, "function aliyundrive_status() { return %d;}\n", aliyundrive_status_code);
 	return 0;
 }
 #endif
@@ -2598,11 +2562,6 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 #else
 	int found_app_zerotier = 0;
 #endif
-#if defined(APP_DDNSTO)
-	int found_app_ddnsto = 1;
-#else
-	int found_app_ddnsto = 0;
-#endif
 #if defined(APP_ADBYBY)
 	int found_app_adbyby = 1;
 #else
@@ -2618,16 +2577,11 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 #else
 	int found_app_frp = 0;
 #endif
-#if defined(APP_NVPPROXY)
-	int found_app_nvpproxy = 1;
-#else
-	int found_app_nvpproxy = 0;
-#endif
-/*#if defined(APP_NPC)
+#if defined(APP_NPC)
 	int found_app_npc = 1;
 #else
 	int found_app_npc = 0;
-#endif*/
+#endif
 #if defined(APP_ALIDDNS)
 	int found_app_aliddns = 1;
 #else
@@ -2647,16 +2601,6 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 	int has_ipv6 = 1;
 #else
 	int has_ipv6 = 0;
-#endif
-#if defined(APP_WIREGUARD)
-	int found_app_wireguard = 1;
-#else
-	int found_app_wireguard = 0;
-#endif
-#if defined(APP_ALDRIVER)
-	int found_app_aldriver = 1;
-#else
-	int found_app_aldriver = 0;
 #endif
 
 #if defined(USE_HW_NAT)
@@ -2720,12 +2664,7 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 #else
 	int has_openssl_ec = 0;
 #endif
-
-#if defined (SUPPORT_DDNS_SSL)
 	int has_ddns_ssl = 1;
-#else
-	int has_ddns_ssl = 0;
-#endif
 #if defined (USE_RT3352_MII)
 	int has_inic_mii = 1;
 #else
@@ -2834,14 +2773,10 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 		"function found_app_adbyby() { return %d;}\n"
 		"function found_app_smartdns() { return %d;}\n"
 		"function found_app_frp() { return %d;}\n"
-		"function found_app_nvpproxy() { return %d;}\n"
 		"function found_app_npc() { return %d;}\n"
 		"function found_app_wyy() { return %d;}\n"
 		"function found_app_zerotier() { return %d;}\n"
-		"function found_app_ddnsto() { return %d;}\n"
-		"function found_app_aldriver() { return %d;}\n"
 		"function found_app_aliddns() { return %d;}\n"
-		"function found_app_wireguard() { return %d;}\n"
 		"function found_app_xupnpd() { return %d;}\n"
 		"function found_app_mentohust() { return %d;}\n",
 		found_utl_hdparm,
@@ -2870,14 +2805,10 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 		found_app_adbyby,
 		found_app_smartdns,
 		found_app_frp,
-		found_app_nvpproxy,
-		0,
+		found_app_npc,
 		found_app_wyy,
 		found_app_zerotier,
-		found_app_ddnsto,
-		found_app_aldriver,
 		found_app_aliddns,
-		found_app_wireguard,
 		found_app_xupnpd,
 		found_app_mentohust
 	);
@@ -3095,28 +3026,26 @@ static int openvpn_cli_cert_hook(int eid, webs_t wp, int argc, char **argv)
 {
 	int has_found_cert = 0;
 #if defined(APP_OPENVPN)
-	int i, i_atls, i_tcv2;
+	int i, i_auth, i_atls;
 	char key_file[64];
-	static const char *openvpn_server_keys[6] = {
+	static const char *openvpn_client_keys[4] = {
 		"ca.crt",
-		"dh1024.pem",
-		"server.crt",
-		"server.key",
-		"ta.key",
-		"stc2.key"
+		"client.crt",
+		"client.key",
+		"ta.key"
 	};
 
 	has_found_cert = 1;
 
-	i_atls = nvram_get_int("vpns_ov_atls");
-	i_tcv2 = nvram_get_int("vpns_ov_tcv2");
+	i_auth = nvram_get_int("vpnc_ov_auth");
+	i_atls = nvram_get_int("vpnc_ov_atls");
 
-	for (i=0; i<6; i++) {
-		if (!i_atls && (i == 4))
+	for (i=0; i<4; i++) {
+		if (i_auth == 1 && (i == 1 || i == 2))
 			continue;
-		if (!i_tcv2 && (i == 5))
+		if (!i_atls && (i == 3))
 			continue;
-		sprintf(key_file, "%s/%s", STORAGE_OVPNSVR_DIR, openvpn_server_keys[i]);
+		sprintf(key_file, "%s/%s", STORAGE_OVPNCLI_DIR, openvpn_client_keys[i]);
 		if (!f_exists(key_file)) {
 			has_found_cert = 0;
 			break;
@@ -3649,13 +3578,6 @@ apply_cgi(const char *url, webs_t wp)
 	else if (!strcmp(value, " Shutdown "))
 	{
 		system("shutdown");
-		websRedirect(wp, current_url);
-		return 0;
-	}
-	else if (!strcmp(value, " FreeMemory "))
-	{
-		doSystem("sync");
-		doSystem("echo 3 > /proc/sys/vm/drop_caches");
 		websRedirect(wp, current_url);
 		return 0;
 	}
@@ -4654,7 +4576,6 @@ struct ej_handler ej_handlers[] =
 	{ "shadowsocks_status", shadowsocks_status_hook},
 	{ "rules_count", rules_count_hook},
 	{ "pdnsd_status", pdnsd_status_hook},
-	{ "dns2tcp_status", dns2tcp_status_hook},
 #endif
 #if defined (APP_KOOLPROXY)
 	{ "koolproxy_action", koolproxy_action_hook},
@@ -4677,24 +4598,13 @@ struct ej_handler ej_handlers[] =
 	{ "frpc_status", frpc_status_hook},
 	{ "frps_status", frps_status_hook},
 #endif
-#if defined (APP_NVPPROXY)
-	{ "nvpproxy_status", nvpproxy_status_hook},
-#endif
-/*#if defined (APP_NPC)
+#if defined (APP_NPC)
 	{ "npc_status", npc_status_hook},
-#endif*/
-#if defined (APP_ZEROTIER)
-	{ "zerotier_status", zerotier_status_hook},
 #endif
-#if defined (APP_DDNSTO)
-	{ "ddnsto_status", ddnsto_status_hook},
-#endif
-#if defined (APP_ALDRIVER)
-	{ "aliyundrive_status", aliyundrive_status_hook},
-#endif
-	{ "update_action", update_action_hook},
+    { "update_action", update_action_hook},
 	{ "openssl_util_hook", openssl_util_hook},
 	{ "openvpn_srv_cert_hook", openvpn_srv_cert_hook},
 	{ "openvpn_cli_cert_hook", openvpn_cli_cert_hook},
 	{ NULL, NULL }
 };
+

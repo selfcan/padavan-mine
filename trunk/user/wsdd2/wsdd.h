@@ -39,7 +39,6 @@
 #include <time.h>
 #include <syslog.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
 #include <arpa/inet.h>
 #include <net/if.h>
 #include <netinet/in.h>
@@ -48,7 +47,6 @@
 #include <linux/rtnetlink.h>
 
 extern int debug_L, debug_W;
-extern char *netbiosname, *workgroup;
 #define DEBUG(x, y, ...)	\
 	do {	\
 		if (debug_##y >= (x)) {	\

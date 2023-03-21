@@ -26,12 +26,7 @@
 #define RTL8367_DEVNAME				"rtl8367"
 
 #if defined(CONFIG_RTL8367_CIF_MDIO)
- #if  defined(CONFIG_RTL8367_MDIO_PHYID)
-  #define MDIO_RTL8367_PHYID			CONFIG_RTL8367_MDIO_PHYID
- #else
-  #warning implicitly defined
-  #define MDIO_RTL8367_PHYID			0
- #endif
+ #define MDIO_RTL8367_PHYID			0
 #else
  #define SMI_RALINK_GPIO_SDA			CONFIG_RTL8367_SMI_BUS_CPU_GPIO_DATA	/* GPIO used for SMI Data signal */
  #define SMI_RALINK_GPIO_SCK			CONFIG_RTL8367_SMI_BUS_CPU_GPIO_CLCK	/* GPIO used for SMI Clock signal */

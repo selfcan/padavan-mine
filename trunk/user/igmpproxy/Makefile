@@ -1,4 +1,4 @@
-SRC_NAME=igmpproxy-0.3
+SRC_NAME="igmpproxy-0.1"
 
 all:	config_test
 	$(MAKE) -C $(SRC_NAME)
@@ -12,7 +12,6 @@ config_test:
 
 configure:
 	( cd $(SRC_NAME) ; \
-	./autogen.sh ; \
 	./configure \
 		--prefix=/ \
 		--host=$(HOST_TARGET) \

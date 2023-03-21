@@ -125,8 +125,6 @@ struct wps_data {
 	int pbc_in_m1;
 
 	struct wps_nfc_pw_token *nfc_pw_token;
-
-	int multi_ap_backhaul_sta;
 };
 
 
@@ -165,8 +163,7 @@ int wps_build_encr_settings(struct wps_data *wps, struct wpabuf *msg,
 			    struct wpabuf *plain);
 int wps_build_version(struct wpabuf *msg);
 int wps_build_wfa_ext(struct wpabuf *msg, int req_to_enroll,
-		      const u8 *auth_macs, size_t auth_macs_count,
-		      u8 multi_ap_subelem);
+		      const u8 *auth_macs, size_t auth_macs_count);
 int wps_build_msg_type(struct wpabuf *msg, enum wps_msg_type msg_type);
 int wps_build_enrollee_nonce(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_registrar_nonce(struct wps_data *wps, struct wpabuf *msg);

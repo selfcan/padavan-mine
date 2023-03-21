@@ -19,7 +19,6 @@ LIB_OBJS= \
 	common.o \
 	crc32.o \
 	ip_addr.o \
-	json.o \
 	radiotap.o \
 	trace.o \
 	uuid.o \

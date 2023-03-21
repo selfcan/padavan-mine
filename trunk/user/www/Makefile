@@ -9,7 +9,7 @@ include $(ROOTDIR)/user/shared/boards.mk
 PROJECT_HOME_URL="https:\/\/bitbucket.org\/padavan\/rt-n56u\/"
 PROJECT_HOME_URL_MOD="https:\/\/github.com\/hanwckf\/rt-n56u\/"
 
-LABEL_COPYRIGHT_TEXT='© 2011-2023 <a href="https:\/\/github.com\/vb1980\/Padavan-KVR" target="blank">vb1980-Padavan-KVR源码<\/a> \& NEWIFI3 \& by <a href="https:\/\/github.com\/lmq8267\/padavan-KVR" target="blank">半透明主题源码<\/a>'
+LABEL_COPYRIGHT_TEXT='© 2011-2022 <a href="https:\/\/bitbucket.org\/padavan\/rt-n56u" target="blank">Padavan<\/a> \& N56U project community \& by <a href="https:\/\/github.com\/hanwckf\/rt-n56u" target="blank">hanwckf<\/a>'
 
 BOARD_PATTERN=s/ZVMODELVZ/$(CONFIG_FIRMWARE_PRODUCT_ID)/g
 COPYR_PATTERN=s/ZVCOPYRVZ/$(LABEL_COPYRIGHT_TEXT)/g
@@ -207,7 +207,6 @@ ifeq ($(CONFIG_FIRMWARE_WEBUI_HIDE_VPN),y)
 endif
 ifneq ($(CONFIG_FIRMWARE_INCLUDE_ADBYBY),y)
 	rm -f $(INSTALLDIR)/www/Advanced_adbyby.asp
-	rm -f $(INSTALLDIR)/www/Ad_action.asp
 endif
 ifneq ($(CONFIG_FIRMWARE_INCLUDE_ALIDDNS),y)
 	rm -f $(INSTALLDIR)/www/Advanced_aliddns.asp
@@ -217,7 +216,6 @@ ifneq ($(CONFIG_FIRMWARE_INCLUDE_ADGUARDHOME),y)
 endif
 ifneq ($(CONFIG_FIRMWARE_INCLUDE_KOOLPROXY),y)
 	rm -f $(INSTALLDIR)/www/Advanced_koolproxy.asp
-	rm -f $(INSTALLDIR)/www/Kp_action.asp
 endif
 ifneq ($(CONFIG_FIRMWARE_INCLUDE_CADDY),y)
 	rm -f $(INSTALLDIR)/www/Advanced_caddy.asp
@@ -231,21 +229,8 @@ endif
 ifeq ($(CONFIG_FIRMWARE_INCLUDE_FRPC)_$(CONFIG_FIRMWARE_INCLUDE_FRPS), n_n)
 	rm -f $(INSTALLDIR)/www/Advanced_frp.asp
 endif
-ifneq ($(CONFIG_FIRMWARE_INCLUDE_NVPPROXY),y)
-	rm -f $(INSTALLDIR)/www/Advanced_nvpproxy.asp
-endif
-#ifneq ($(CONFIG_FIRMWARE_INCLUDE_NPC),y)
+ifneq ($(CONFIG_FIRMWARE_INCLUDE_NPC),y)
 	rm -f $(INSTALLDIR)/www/Advanced_npc.asp
-	rm -f $(INSTALLDIR)/www/Advanced_npc_log.asp
-#endif
-ifneq ($(CONFIG_FIRMWARE_INCLUDE_DDNSTO),y)
-	rm -f $(INSTALLDIR)/www/Advanced_ddnsto.asp
-endif
-ifneq ($(CONFIG_FIRMWARE_INCLUDE_WIREGUARD),y)
-	rm -f $(INSTALLDIR)/www/Advanced_wireguard.asp
-endif
-ifneq ($(CONFIG_FIRMWARE_INCLUDE_ALDRIVER),y)
-	rm -f $(INSTALLDIR)/www/Advanced_aliyundrive.asp
 endif
 
 clean:

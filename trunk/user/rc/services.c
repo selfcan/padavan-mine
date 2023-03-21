@@ -154,10 +154,10 @@ stop_networkmap(void)
 void
 restart_networkmap(void)
 {
-	//if (pids("networkmap"))
-		//doSystem("killall %s %s", "-KILL", "networkmap");
-	stop_networkmap();
-	start_networkmap(0);
+	if (pids("networkmap"))
+		doSystem("killall %s %s", "-SIGUSR1", "networkmap");
+	else
+		start_networkmap(0);
 }
 
 void
@@ -405,6 +405,7 @@ void start_napt66(void){
 	}
 }
 #endif
+
 #if defined(APP_KOOLPROXY)
 void stop_koolproxy(void){
 	eval("/usr/bin/koolproxy.sh","stop");
@@ -532,7 +533,7 @@ void restart_frp(void){
 }
 #endif
 
-/*#if defined(APP_NPC)
+#if defined(APP_NPC)
 void stop_npc(void){
 	eval("/usr/bin/npc.sh","stop");
 }
@@ -544,22 +545,6 @@ void start_npc(void){
 void restart_npc(void){
 	stop_npc();
 	start_npc();
-}
-#endif*/
-#if defined(APP_DDNSTO)
-void stop_ddnsto(void){
-	eval("/usr/bin/ddnsto.sh","stop");
-}
-
-void start_ddnsto(void){
-	int ddnsto_enable = nvram_get_int("ddnsto_enable");
-	if ( ddnsto_enable == 1)
-		eval("/usr/bin/ddnsto.sh","start");
-}
-
-void restart_ddnsto(void){
-	stop_ddnsto();
-	start_ddnsto();
 }
 #endif
 
@@ -592,57 +577,6 @@ void start_aliddns(void){
 void restart_aliddns(void){
     stop_aliddns();
 	start_aliddns();
-}
-#endif
-
-#if defined(APP_NVPPROXY)
-void stop_nvpproxy(void){
-	eval("/usr/bin/nvpproxy.sh","stop");
-}
-
-void start_nvpproxy(void){
-	int aliddns_mode = nvram_get_int("nvpproxy_enable");
-	if ( aliddns_mode == 1)
-		eval("/usr/bin/nvpproxy.sh","start");
-}
-
-void restart_nvpproxy(void){
-    stop_nvpproxy();
-    start_nvpproxy();
-}
-#endif
-
-#if defined(APP_WIREGUARD)
-void stop_wireguard(void){
-	eval("/usr/bin/wireguard.sh","stop");
-}
-
-void start_wireguard(void){
-	int wireguard_enable = nvram_get_int("wireguard_enable");
-	if ( wireguard_enable == 1)
-		eval("/usr/bin/wireguard.sh","start");
-}
-
-void restart_wireguard(void){
-	stop_wireguard();
-	start_wireguard();
-}
-#endif
-
-#if defined(APP_ALDRIVER)
-void stop_aldriver(void){
-	eval("/usr/bin/aliyundrive-webdav.sh","stop");
-}
-
-void start_aldriver(void){
-	int aldriver_enable = nvram_get_int("aliyundrive_enable");
-	if ( aldriver_enable == 1)
-		eval("/usr/bin/aliyundrive-webdav.sh","start");
-}
-
-void restart_aldriver(void){
-	stop_aldriver();
-	start_aldriver();
 }
 #endif
 
@@ -855,12 +789,37 @@ doSystem("/usr/sbin/skipd -d /etc/storage/db");
 #if defined(APP_DNSFORWARDER)
 	start_dnsforwarder();
 #endif
+//#if defined(APP_SHADOWSOCKS)
+//	start_ss();
+//	start_ss_tunnel();
+//#endif
 #if defined(APP_TTYD)
 	start_ttyd();
 #endif
+//#if defined(APP_FRP)
+//	start_frp();
+//#endif
+//#if defined(APP_NPC)
+//	start_npc();
+//#endif
 #if defined(APP_VLMCSD)
 	start_vlmcsd();
 #endif
+//#if defined(APP_KOOLPROXY)
+//	start_koolproxy();
+//#endif
+//#if defined(APP_ADBYBY)
+//	start_adbyby();
+//#endif
+//#if defined(APP_ALIDDNS)
+//	start_aliddns();
+//#endif
+//#if defined(APP_SMARTDNS)
+//	start_smartdns();
+//#endif
+//#if defined(APP_CADDY)
+//	start_caddy();
+//#endif
 	start_lltd();
 	start_watchdog_cpu();
 	start_crond();
@@ -869,7 +828,6 @@ doSystem("/usr/sbin/skipd -d /etc/storage/db");
 #if defined(APP_MENTOHUST)
 	start_mentohust();
 #endif
-	system("/usr/bin/iappd.sh start");
 	return 0;
 }
 
@@ -905,11 +863,8 @@ stop_services(int stopall)
 #if defined(APP_FRP)
 	stop_frp();
 #endif
-/*#if defined(APP_NPC)
+#if defined(APP_NPC)
 	stop_npc();
-#endif*/
-#if defined(APP_DDNSTO)
-	stop_ddnsto();
 #endif
 #if defined(APP_KOOLPROXY)
 	stop_koolproxy();
@@ -938,12 +893,6 @@ stop_services(int stopall)
 #endif
 #if defined(APP_CADDY)
 	stop_caddy();
-#endif
-#if defined(APP_WIREGUARD)
-	stop_wireguard();
-#endif
-#if defined(APP_ALDRIVER)
-	stop_aldriver();
 #endif
 	stop_networkmap();
 	stop_lltd();

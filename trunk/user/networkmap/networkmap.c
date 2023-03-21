@@ -226,10 +226,6 @@ net_clients_reset(void)
 	if (fp)
 		fclose(fp);
 
-	fp = fopen("/tmp/static_ipv6.inf", "w");
-	if (fp)
-		fclose(fp);
-
 	fp = fopen("/tmp/static_ip.num", "w");
 	if (fp) {
 		fprintf(fp, "%u", 0);
@@ -276,8 +272,6 @@ net_clients_update(void)
 		fclose(fp);
 	}
 
-	doSystem("%s >/tmp/syscmd.log 2>&1\n", "sh /etc/storage/ipv6.sh");
-	
 	fp = fopen("/tmp/static_ip.num", "w");
 	if (fp) {
 		fprintf(fp, "%u", vcount);
@@ -741,3 +735,4 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+

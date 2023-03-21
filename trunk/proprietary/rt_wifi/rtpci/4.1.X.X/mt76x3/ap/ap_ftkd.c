@@ -83,8 +83,9 @@
 #include "rt_config.h"
 #include "ft_cmm.h"
 
-#define FT_KDP_FUNC_TEST
 #define TYPE_FUNC
+#define FT_KDP_DEBUG
+#define FT_KDP_FUNC_TEST
 /*#define FT_KDP_EMPTY */ /* empty codes to debug */
 
 #define IAPP_SHOW_IP_HTONL(__IP)	\
@@ -380,7 +381,7 @@ VOID TYPE_FUNC FT_KDP_EventInform(
 				When a STA associates or reassociates, the STA must ascertain
 				that its network layer address(es) is configured such that the
 				normal routing functions of the network attaching to the BSS
-				will correctly deliver the STA\A1\A6s traffic to the BSS to which
+				will correctly deliver the STA¡¦s traffic to the BSS to which
 				it is associated.
 
 				Two mechanisms for a STA to accomplish this are to renew a
@@ -816,7 +817,7 @@ VOID TYPE_FUNC FT_KDP_KeyResponseToUs(
 
 	/* init */
 	IAPP_DAEMON_CMD_PARSE(pInfo, InfoLen, PeerIP, pData, DataLen);
-	DBGPRINT(RT_DEBUG_TRACE,
+	DBGPRINT(RT_DEBUG_ERROR,
 			("ap_ftkd> DataLen = %d!\n", DataLen));
 
 	pNonce = pData;
@@ -969,7 +970,7 @@ VOID TYPE_FUNC FT_KDP_StationInform(
 
 	/* init */
 	IAPP_DAEMON_CMD_PARSE(pInfo, InfoLen, PeerIP, pData, DataLen);
-	DBGPRINT(RT_DEBUG_TRACE,
+	DBGPRINT(RT_DEBUG_ERROR,
 		("ap_ftkd> %s: DataLen = %d!\n", __FUNCTION__, DataLen));
 
 #ifndef FT_KDP_FUNC_TEST

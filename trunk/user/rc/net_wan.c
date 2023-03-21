@@ -1796,7 +1796,7 @@ update_hosts_router(const char *lan_ipaddr)
 			fprintf(fp, "%s %s.%s %s\n", lan_ipaddr, lan_hname, lan_dname, lan_hname);
 		else
 			fprintf(fp, "%s %s\n", lan_ipaddr, lan_hname);
-		fprintf(fp, "%s %s\n", lan_ipaddr, "my.router");
+		fprintf(fp, "%s %s\n", lan_ipaddr, "hiwifi.com");
 		
 		/* load static DHCP list */
 		load_user_config(fp, "/tmp", "hosts.static", NULL);
@@ -1811,7 +1811,7 @@ update_hosts_router(const char *lan_ipaddr)
 					fprintf(fp, "%s %s.%s %s\n", lan_addr6_host, lan_hname, lan_dname, lan_hname);
 				else
 					fprintf(fp, "%s %s\n", lan_addr6_host, lan_hname);
-				fprintf(fp, "%s %s\n", lan_addr6_host, "my.router");
+				fprintf(fp, "%s %s\n", lan_addr6_host, "hiwifi.com");
 			}
 		}
 #endif

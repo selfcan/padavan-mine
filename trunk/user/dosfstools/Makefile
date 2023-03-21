@@ -1,19 +1,18 @@
-SRC_NAME=dosfstools-4.2
-SRC_URL=https://github.com/dosfstools/dosfstools/releases/download/v4.2/dosfstools-4.2.tar.gz
-CFLAGS+=$(COPT) -ffunction-sections -fdata-sections -fvisibility=hidden
-LDFLAGS += -Wl,--gc-sections
+SRC_NAME=dosfstools-4.1
+SRC_URL=https://github.com/dosfstools/dosfstools/releases/download/v4.1/dosfstools-4.1.tar.xz
 
 all: download_test extract_test config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 download_test:
-	( if [ ! -f $(SRC_NAME).tar.gz ]; then \
-		wget -t5 --timeout=20 --no-check-certificate -O $(SRC_NAME).tar.gz $(SRC_URL); \
+	( if [ ! -f $(SRC_NAME).tar.xz ]; then \
+		wget -t5 --timeout=20 --no-check-certificate -O $(SRC_NAME).tar.xz $(SRC_URL); \
 	fi )
 
 extract_test:
 	( if [ ! -d $(SRC_NAME) ]; then \
-		tar -xzf $(SRC_NAME).tar.gz; \
+		tar xJf $(SRC_NAME).tar.xz; \
+		patch -p1 -d $(SRC_NAME) < $(SRC_NAME).patch ; \
 	fi )
 
 config_test:
@@ -45,3 +44,4 @@ romfs:
 	cp $(SRC_NAME)/src/fsck.fat .
 	$(STRIP) fsck.fat
 	$(ROMFSINST) /sbin/fsck.fat
+

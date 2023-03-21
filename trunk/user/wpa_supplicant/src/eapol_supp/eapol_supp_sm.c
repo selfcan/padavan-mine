@@ -189,9 +189,8 @@ static void eapol_port_timers_tick(void *eloop_ctx, void *timeout_ctx)
 	}
 
 	if (sm->authWhile | sm->heldWhile | sm->startWhen | sm->idleWhile) {
-		if (eloop_register_timeout(1, 0, eapol_port_timers_tick,
-					   eloop_ctx, sm) < 0)
-			sm->timer_tick_enabled = 0;
+		eloop_register_timeout(1, 0, eapol_port_timers_tick, eloop_ctx,
+				       sm);
 	} else {
 		wpa_printf(MSG_DEBUG, "EAPOL: disable timer tick");
 		sm->timer_tick_enabled = 0;
@@ -205,9 +204,9 @@ static void eapol_enable_timer_tick(struct eapol_sm *sm)
 	if (sm->timer_tick_enabled)
 		return;
 	wpa_printf(MSG_DEBUG, "EAPOL: enable timer tick");
+	sm->timer_tick_enabled = 1;
 	eloop_cancel_timeout(eapol_port_timers_tick, NULL, sm);
-	if (eloop_register_timeout(1, 0, eapol_port_timers_tick, NULL, sm) == 0)
-		sm->timer_tick_enabled = 1;
+	eloop_register_timeout(1, 0, eapol_port_timers_tick, NULL, sm);
 }
 
 
@@ -1998,12 +1997,15 @@ static void eapol_sm_eap_param_needed(void *ctx, enum wpa_ctrl_req_type field,
 #define eapol_sm_eap_param_needed NULL
 #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
 
-static void eapol_sm_notify_cert(void *ctx, struct tls_cert_data *cert,
-				 const char *cert_hash)
+static void eapol_sm_notify_cert(void *ctx, int depth, const char *subject,
+				 const char *altsubject[],
+				 int num_altsubject, const char *cert_hash,
+				 const struct wpabuf *cert)
 {
 	struct eapol_sm *sm = ctx;
 	if (sm->ctx->cert_cb)
-		sm->ctx->cert_cb(sm->ctx->ctx, cert, cert_hash);
+		sm->ctx->cert_cb(sm->ctx->ctx, depth, subject, altsubject,
+				 num_altsubject, cert_hash, cert);
 }
 
 
@@ -2139,8 +2141,8 @@ struct eapol_sm *eapol_sm_init(struct eapol_ctx *ctx)
 	sm->initialize = FALSE;
 	eapol_sm_step(sm);
 
-	if (eloop_register_timeout(1, 0, eapol_port_timers_tick, NULL, sm) == 0)
-		sm->timer_tick_enabled = 1;
+	sm->timer_tick_enabled = 1;
+	eloop_register_timeout(1, 0, eapol_port_timers_tick, NULL, sm);
 
 	return sm;
 }
