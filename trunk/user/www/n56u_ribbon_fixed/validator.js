@@ -230,7 +230,7 @@ var validator = {
 				}
 			}
 		}
-		else if(sk==37){ // 37-> 鍵盤向左鍵
+		else if(sk==37){ // 37-> keyboard left key
 			if(getCaretPos(o) == 0 && moveLeft_key == 0){
 				moveLeft_key = 1;
 			}
@@ -244,7 +244,7 @@ var validator = {
 			}
 			moveRight_key = 0;
 		}
-		else if(sk==39){ //39 ->鍵盤向右鍵
+		else if(sk==39){ //39 ->keyboard right arrow
 			if(getCaretPos(o) == 0 && s.length == 0 && nextInputBlock && validateRange(o)){
 				nextInputBlock.focus();
 				moveRight_key = 0;
@@ -1280,7 +1280,7 @@ var validator = {
 		var IP_Validate = function(o){
 			var ip_reg=/^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$/;
 			
-			if(ip_reg.test(o.value)){ //區分是否為IP
+			if(ip_reg.test(o.value)){ //Distinguish whether it is IP
 				return true;
 			}
 			else{
@@ -1309,7 +1309,7 @@ var validator = {
 				document.form.wan_ipaddr_x1.focus();
 				return false;
 			}
-			else if(o.value.indexOf("0") == 0){ /*首字不能為0*/
+			else if(o.value.indexOf("0") == 0){ /*The first character cannot be 0*/
 				if(document.getElementById(o.name+"_div")){
 					document.getElementById(o.name+"_div").style.border = "2px solid #CE1E1E";
 				}
@@ -1317,7 +1317,7 @@ var validator = {
 				document.form.wan_ipaddr_x1.focus();
 				return false;
 			}		
-			else if(!(IP_Validate(o))){ /*IP格式錯誤*/
+			else if(!(IP_Validate(o))){ /*IP format error*/
 				if(document.getElementById(o.name+"_div")){
 					document.getElementById(o.name+"_div").style.border = "2px solid #CE1E1E";
 				}
@@ -1361,7 +1361,7 @@ var validator = {
 				document.form.wan_netmask_x1.focus();
 				return false;
 			}
-			else if(!(IP_Validate(o))){ /*IP格式錯誤*/
+			else if(!(IP_Validate(o))){ /*IP format error*/
 				if(document.getElementById(o.name+"_div")){
 					document.getElementById(o.name+"_div").style.border = "2px solid #CE1E1E";
 				}
@@ -1385,7 +1385,7 @@ var validator = {
 		}
 		else if(v == 'wan_gateway_x'){
 			if(o.value.length > 0){
-				if(!(IP_Validate(o))){ /* IP格式錯誤*/
+				if(!(IP_Validate(o))){ /* IP format error*/
 					if(document.getElementById(o.name+"_div")){
 						document.getElementById(o.name+"_div").style.border = "2px solid #CE1E1E";
 					}

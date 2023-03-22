@@ -244,8 +244,7 @@ start_udpxy(char *wan_ifname)
 		"-m", wan_ifname,
 		"-p", nvram_safe_get("udpxy_enable_x"),
 		"-B", "65536",
-		"-c", nvram_safe_get("udpxy_clients"),
-		"-M", nvram_safe_get("udpxy_renew_period")
+		"-c", nvram_safe_get("udpxy_clients")
 		);
 }
 
@@ -773,27 +772,26 @@ reload_nat_modules(void)
 
 	hwnat_configure(hwnat_allow);
 #endif
+
 #if defined (USE_SFE)
-	int sfe_enable = nvram_get_int("sfe_enable");
+	int sfe_enable = nvram_safe_get_int("sfe_enable", 0, 0, 2);
 	int sfe_loaded = is_module_loaded("fast_classifier");
 
 	if (sfe_loaded && !sfe_enable) {
 		module_smart_unload("fast_classifier", 1);
-		doSystem("echo 1 > /proc/sys/net/netfilter/nf_conntrack_tcp_be_liberal");
-		doSystem("echo 1 > /proc/sys/net/netfilter/nf_conntrack_tcp_no_window_check");
 		sfe_loaded = 0;
+		fput_int("/proc/sys/net/netfilter/nf_conntrack_tcp_be_liberal", 1);
+		fput_int("/proc/sys/net/netfilter/nf_conntrack_tcp_no_window_check", 1);
 	}
 	if (sfe_enable && !sfe_loaded) {
-		doSystem("echo 0 > /proc/sys/net/netfilter/nf_conntrack_tcp_be_liberal");
-		doSystem("echo 0 > /proc/sys/net/netfilter/nf_conntrack_tcp_no_window_check");
 		module_smart_load("fast_classifier", NULL);
 		sfe_loaded = 1;
+		fput_int("/proc/sys/net/netfilter/nf_conntrack_tcp_be_liberal", 0);
+		fput_int("/proc/sys/net/netfilter/nf_conntrack_tcp_no_window_check", 0);
+
 	}
-	if (sfe_loaded) {
-		if (sfe_enable == 1)
-			doSystem("echo 0 > /sys/fast_classifier/skip_to_bridge_ingress");
-		else if (sfe_enable == 2)
-			doSystem("echo 1 > /sys/fast_classifier/skip_to_bridge_ingress");
+	if (sfe_loaded && ((sfe_enable == 1) || (sfe_enable == 2 ))) {
+			fput_int("/sys/fast_classifier/skip_to_bridge_ingress", sfe_enable - 1);
 	}
 #endif
 }
@@ -895,8 +893,8 @@ set_tcp_tweaks(void)
 	sprintf(tmp, "/proc/sys/net/%s/%s", "ipv4", "tcp_synack_retries");
 	fput_int(tmp, 3);		// def: 5
 
-	sprintf(tmp, "/proc/sys/net/%s/%s", "ipv4", "tcp_tw_recycle");
-	fput_int(tmp, 1);
+	//sprintf(tmp, "/proc/sys/net/%s/%s", "ipv4", "tcp_tw_recycle");
+	//fput_int(tmp, 1);
 
 	sprintf(tmp, "/proc/sys/net/%s/%s", "ipv4", "tcp_tw_reuse");
 	fput_int(tmp, 1);

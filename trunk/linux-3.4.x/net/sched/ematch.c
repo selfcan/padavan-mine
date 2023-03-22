@@ -240,6 +240,9 @@ static int tcf_em_validate(struct tcf_proto *tp,
 			goto errout;
 
 		if (em->ops->change) {
+			err = -EINVAL;
+			if (em_hdr->flags & TCF_EM_SIMPLE)
+				goto errout;
 			err = em->ops->change(tp, data, data_len, em);
 			if (err < 0)
 				goto errout;
@@ -265,12 +268,12 @@ static int tcf_em_validate(struct tcf_proto *tp,
 				}
 				em->data = (unsigned long) v;
 			}
+			em->datalen = data_len;
 		}
 	}
 
 	em->matchid = em_hdr->matchid;
 	em->flags = em_hdr->flags;
-	em->datalen = data_len;
 
 	err = 0;
 errout:

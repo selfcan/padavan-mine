@@ -66,33 +66,30 @@
 /* References to section boundaries */
 extern char _end;
 
+#ifdef CONFIG_UBOOT_CMDLINE
 static unsigned int __init prom_get_ramsize(void)
 {
-	char *env_str;
+	char *argptr;
 	unsigned int ramsize = 0;
 
-	env_str = prom_getenv("memsize");
-	if (env_str == NULL)
-		env_str = prom_getenv("ramsize");
-	
-	if (env_str != NULL)
-	{
-		printk("prom memory:%sMB\n", env_str);
-		ramsize = simple_strtol(env_str, NULL, 0);
-		ramsize = ramsize * 1024 * 1024;
+	argptr = prom_getcmdline();
+
+	if ((argptr = strstr(argptr, "ramsize=")) != NULL) {
+		argptr += strlen("ramsize=");
+		ramsize = simple_strtoul(&argptr[0], NULL, 0);
 	}
-        
+
 	return ramsize;
 }
-
+#endif
 
 void __init prom_meminit(void)
 {
 	phys_t ramsize = 0;
 
-
+#ifdef CONFIG_UBOOT_CMDLINE
 	ramsize = (phys_t)prom_get_ramsize();
-
+#endif
 	if (ramsize < RAM_SIZE_MIN || ramsize > RAM_SIZE_MAX)
 		ramsize = RAM_SIZE;
 

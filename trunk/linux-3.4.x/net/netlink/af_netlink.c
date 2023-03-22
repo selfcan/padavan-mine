@@ -1339,6 +1339,11 @@ static int netlink_sendmsg(struct kiocb *kiocb, struct socket *sock,
 	if (msg->msg_flags&MSG_OOB)
 		return -EOPNOTSUPP;
 
+	if (len == 0) {
+		pr_warn_once("Zero length message leads to an empty skb\n");
+		return -ENODATA;
+	}
+
 	if (NULL == siocb->scm)
 		siocb->scm = &scm;
 
@@ -1348,6 +1353,8 @@ static int netlink_sendmsg(struct kiocb *kiocb, struct socket *sock,
 
 	if (msg->msg_namelen) {
 		err = -EINVAL;
+		if (msg->msg_namelen < sizeof(struct sockaddr_nl))
+			goto out;
 		if (addr->nl_family != AF_NETLINK)
 			goto out;
 		dst_pid = addr->nl_pid;

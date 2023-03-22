@@ -1,7 +1,8 @@
-SRC_NAME=libxml2-2.9.9
-SRC_URL=http://xmlsoft.org/sources/$(SRC_NAME).tar.gz
+SRC_NAME=libxml2-2.10.3
+SRC_URL=https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.10.3/libxml2-v2.10.3.tar.gz
 
-all: download_test extract_test config_test
+#all: download_test extract_test config_test
+all: config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 download_test:
@@ -23,8 +24,9 @@ config_test:
 
 configure:
 	( cd $(SRC_NAME) ; \
+        ./autogen.sh;\
 	./configure \
-		--prefix=$(STAGEDIR) \
+		--prefix= \
 		--enable-static \
 		--disable-shared \
 		$(if $(CONFIG_IPV6),--enable-ipv6,--disable-ipv6) \
@@ -67,7 +69,8 @@ clean:
 	rm -f config_done
 
 install:
-	$(MAKE) -C $(SRC_NAME) install DESTDIR=""
-
+	$(MAKE) -C $(SRC_NAME) install DESTDIR=$(STAGEDIR)
+	
 romfs:
+
 

@@ -22,8 +22,6 @@ menuconfig NET
 	  <http://www.tldp.org/docs.html#howto>.
 
 if NET
-config SHORTCUT_FE
-	bool "Enables kernel network stack path for Shortcut Forwarding Engine"
 
 config WANT_COMPAT_NETLINK_MESSAGES
 	bool
@@ -75,6 +73,7 @@ config INET
 	  Short answer: say Y.
 
 if INET
+source "net/wireguard/Kconfig"
 source "net/ipv4/Kconfig"
 source "net/ipv6/Kconfig"
 source "net/netlabel/Kconfig"
@@ -253,6 +252,9 @@ config BQL
 
 config HAVE_BPF_JIT
 	bool
+
+config SHORTCUT_FE
+	bool "Enables kernel network stack path for Shortcut Forwarding Engine"
 
 config BPF_JIT
 	bool "enable BPF Just In Time compiler"

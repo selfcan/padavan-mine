@@ -120,6 +120,28 @@ out:
 	return err;
 }
 
+static bool fib6_rule_suppress(struct fib_rule *rule, struct fib_lookup_arg *arg)
+{
+	struct rt6_info *rt = (struct rt6_info *) arg->result;
+	struct net_device *dev = rt->rt6i_idev->dev;
+	/* do not accept result if the route does
+	 * not meet the required prefix length
+	 */
+	if (rt->rt6i_dst.plen <= rule->suppress_prefixlen)
+		goto suppress_route;
+
+	/* do not accept result if the route uses a device
+	 * belonging to a forbidden interface group
+	 */
+	if (rule->suppress_ifgroup != -1 && dev && dev->group == rule->suppress_ifgroup)
+		goto suppress_route;
+
+	return false;
+
+suppress_route:
+		ip6_rt_put(rt);
+		return true;
+}
 
 static int fib6_rule_match(struct fib_rule *rule, struct flowi *fl, int flags)
 {
@@ -253,6 +275,7 @@ static const struct fib_rules_ops __net_initdata fib6_rules_ops_template = {
 	.addr_size		= sizeof(struct in6_addr),
 	.action			= fib6_rule_action,
 	.match			= fib6_rule_match,
+	.suppress		= fib6_rule_suppress,
 	.configure		= fib6_rule_configure,
 	.compare		= fib6_rule_compare,
 	.fill			= fib6_rule_fill,

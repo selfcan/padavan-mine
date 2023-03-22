@@ -18,6 +18,8 @@ struct fib_rule {
 	u32			pref;
 	u32			flags;
 	u32			table;
+	int			suppress_ifgroup;
+	int			suppress_prefixlen;
 	u8			action;
 	u32			target;
 	struct fib_rule __rcu	*ctarget;
@@ -46,6 +48,8 @@ struct fib_rules_ops {
 	int			(*action)(struct fib_rule *,
 					  struct flowi *, int,
 					  struct fib_lookup_arg *);
+	bool			(*suppress)(struct fib_rule *,
+					    struct fib_lookup_arg *);
 	int			(*match)(struct fib_rule *,
 					 struct flowi *, int);
 	int			(*configure)(struct fib_rule *,
@@ -79,6 +83,8 @@ struct fib_rules_ops {
 	[FRA_FWMARK]	= { .type = NLA_U32 }, \
 	[FRA_FWMASK]	= { .type = NLA_U32 }, \
 	[FRA_TABLE]     = { .type = NLA_U32 }, \
+	[FRA_SUPPRESS_PREFIXLEN] = { .type = NLA_U32 }, \
+	[FRA_SUPPRESS_IFGROUP] = { .type = NLA_U32 }, \
 	[FRA_GOTO]	= { .type = NLA_U32 }
 
 static inline void fib_rule_get(struct fib_rule *rule)

@@ -1196,6 +1196,12 @@ static int __dev_open(struct net_device *dev)
 	if (!netif_device_present(dev))
 		return -ENODEV;
 
+	/* Block netpoll from trying to do any rx path servicing.
+	 * If we don't do this there is a chance ndo_poll_controller
+	 * or ndo_poll may be running while we open the device
+	 */
+	netpoll_poll_disable(dev);
+
 	ret = call_netdevice_notifiers(NETDEV_PRE_UP, dev);
 	ret = notifier_to_errno(ret);
 	if (ret)
@@ -1208,6 +1214,8 @@ static int __dev_open(struct net_device *dev)
 
 	if (!ret && ops->ndo_open)
 		ret = ops->ndo_open(dev);
+
+	netpoll_poll_enable(dev);
 
 	if (ret)
 		clear_bit(__LINK_STATE_START, &dev->state);
@@ -1259,6 +1267,9 @@ static int __dev_close_many(struct list_head *head)
 	might_sleep();
 
 	list_for_each_entry(dev, head, close_list) {
+		/* Temporarily disable netpoll until the interface is down */
+		netpoll_poll_disable(dev);
+
 		call_netdevice_notifiers(NETDEV_GOING_DOWN, dev);
 
 		clear_bit(__LINK_STATE_START, &dev->state);
@@ -1288,6 +1299,8 @@ static int __dev_close_many(struct list_head *head)
 			ops->ndo_stop(dev);
 
 		dev->flags &= ~IFF_UP;
+
+		netpoll_poll_enable(dev);
 	}
 
 	return 0;
@@ -1301,6 +1314,7 @@ static int __dev_close(struct net_device *dev)
 	list_add(&dev->close_list, &single);
 	retval = __dev_close_many(&single);
 	list_del(&single);
+
 	return retval;
 }
 
@@ -1343,6 +1357,7 @@ int dev_close(struct net_device *dev)
 		list_add(&dev->close_list, &single);
 		dev_close_many(&single, true);
 		list_del(&single);
+
 	}
 	return 0;
 }
@@ -2235,22 +2250,29 @@ int dev_hard_start_xmit(struct sk_buff *skb, struct net_device *dev,
 		 */
 		if (dev->priv_flags & IFF_XMIT_DST_RELEASE)
 			skb_dst_drop(skb);
-
+#ifndef CONFIG_SHORTCUT_FE
 #if defined(CONFIG_IMQ) || defined(CONFIG_IMQ_MODULE)
 		if (!list_empty(&ptype_all) &&
 					!(skb->imq_flags & IMQ_F_ENQUEUE))
 #else
-#ifdef CONFIG_SHORTCUT_FE
-		/* If this skb has been fast forwarded then we don't want it to
-		 * go to any taps (by definition we're trying to bypass them).
-		 */
-		if (!skb->fast_forwarded) {
-#endif
 		if (!list_empty(&ptype_all))
 #endif
 			dev_queue_xmit_nit(skb, dev);
+#endif
+
 #ifdef CONFIG_SHORTCUT_FE
-		}
+	/* If this skb has been fast forwarded then we don't want it to
+	 * go to any taps (by definition we're trying to bypass them).
+	 */
+	if (!skb->fast_forwarded) {
+#if defined(CONFIG_IMQ) || defined(CONFIG_IMQ_MODULE)
+		if (!list_empty(&ptype_all) &&
+					!(skb->imq_flags & IMQ_F_ENQUEUE))
+#else
+		if (!list_empty(&ptype_all))
+#endif
+			dev_queue_xmit_nit(skb, dev);
+}
 #endif
 
 		features = netif_skb_features(skb);
@@ -2414,8 +2436,8 @@ static inline int get_xps_queue(struct net_device *dev, struct sk_buff *skb)
 #endif
 }
 
-static struct netdev_queue *dev_pick_tx(struct net_device *dev,
-					struct sk_buff *skb)
+struct netdev_queue *netdev_pick_tx(struct net_device *dev,
+				    struct sk_buff *skb)
 {
 	int queue_index;
 	const struct net_device_ops *ops = dev->netdev_ops;
@@ -2557,7 +2579,7 @@ static void skb_update_prio(struct sk_buff *skb)
 #endif
 
 static DEFINE_PER_CPU(int, xmit_recursion);
-#define RECURSION_LIMIT 10
+#define RECURSION_LIMIT 8
 
 /**
  *	dev_loopback_xmit - loop back @skb
@@ -2617,7 +2639,7 @@ int dev_queue_xmit(struct sk_buff *skb)
 
 	skb_update_prio(skb);
 
-	txq = dev_pick_tx(dev, skb);
+	txq = netdev_pick_tx(dev, skb);
 	q = rcu_dereference_bh(txq->qdisc);
 
 #ifdef CONFIG_NET_CLS_ACT
@@ -3211,12 +3233,6 @@ int netif_rx(struct sk_buff *skb)
 {
 	int ret;
 
-#ifdef CONFIG_NETPOLL
-	/* if netpoll wants it, pretend we never saw it */
-	if (netpoll_rx(skb))
-		return NET_RX_DROP;
-#endif
-
 	net_timestamp_check(netdev_tstamp_prequeue, skb);
 
 	trace_netif_rx(skb);
@@ -3457,24 +3473,28 @@ static int __netif_receive_skb(struct sk_buff *skb)
 	bool deliver_exact = false;
 	int ret = NET_RX_DROP;
 	__be16 type;
-#ifdef CONFIG_SHORTCUT_FE
+#ifdef CONFIG_SHORTCUT_FE 
 	int (*fast_recv)(struct sk_buff *skb);
 #endif
+
 	net_timestamp_check(!netdev_tstamp_prequeue, skb);
 
 	trace_netif_receive_skb(skb);
-
-#ifdef CONFIG_NETPOLL
-	/* if we've gotten here through NAPI, check netpoll */
-	if (netpoll_receive_skb(skb))
-		return NET_RX_DROP;
-#endif
 
 	orig_dev = skb->dev;
 
 	skb_reset_network_header(skb);
 	skb_reset_transport_header(skb);
 	skb_reset_mac_len(skb);
+#ifdef CONFIG_SHORTCUT_FE
+	fast_recv = rcu_dereference(athrs_fast_nat_recv);
+	if (fast_recv) {
+		if (fast_recv(skb)) {
+			rcu_read_unlock();
+			return NET_RX_SUCCESS;
+		}
+	}
+#endif
 
 	pt_prev = NULL;
 
@@ -3494,16 +3514,6 @@ another_round:
 	if (private_pthrough(skb)) {
 		ret = NET_RX_SUCCESS;
 		goto out;
-	}
-#endif
-
-#ifdef CONFIG_SHORTCUT_FE
-	fast_recv = rcu_dereference(athrs_fast_nat_recv);
-	if (fast_recv) {
-		if (fast_recv(skb)) {
-			ret = NET_RX_SUCCESS;
-			goto out;
-		}
 	}
 #endif
 
@@ -3766,7 +3776,7 @@ static enum gro_result dev_gro_receive(struct napi_struct *napi, struct sk_buff 
 	if (skb->pkt_type == PACKET_OTHERHOST)
 		goto normal;
 
-	if (!(skb->dev->features & NETIF_F_GRO) || netpoll_rx_on(skb))
+	if (!(skb->dev->features & NETIF_F_GRO))
 		goto normal;
 
 	if (skb_is_gso(skb) || skb_has_frag_list(skb))
@@ -3877,10 +3887,7 @@ static gro_result_t napi_skb_finish(gro_result_t ret, struct sk_buff *skb)
 		break;
 
 	case GRO_MERGED_FREE:
-		if (NAPI_GRO_CB(skb)->free == NAPI_GRO_FREE_STOLEN_HEAD)
-			kmem_cache_free(skbuff_head_cache, skb);
-		else
-			__kfree_skb(skb);
+		consume_skb(skb);
 		break;
 
 	case GRO_HELD:
@@ -5140,6 +5147,18 @@ int dev_change_flags(struct net_device *dev, unsigned int flags)
 }
 EXPORT_SYMBOL(dev_change_flags);
 
+static int __dev_set_mtu(struct net_device *dev, int new_mtu)
+{
+	const struct net_device_ops *ops = dev->netdev_ops;
+
+	if (ops->ndo_change_mtu)
+		return ops->ndo_change_mtu(dev, new_mtu);
+
+	/* Pairs with all the lockless reads of dev->mtu in the stack */
+	ACCESS_ONCE(dev->mtu) = new_mtu;
+	return 0;
+}
+
 /**
  *	dev_set_mtu - Change maximum transfer unit
  *	@dev: device
@@ -5149,8 +5168,7 @@ EXPORT_SYMBOL(dev_change_flags);
  */
 int dev_set_mtu(struct net_device *dev, int new_mtu)
 {
-	const struct net_device_ops *ops = dev->netdev_ops;
-	int err;
+	int err, orig_mtu;
 
 	if (new_mtu == dev->mtu)
 		return 0;
@@ -5162,14 +5180,20 @@ int dev_set_mtu(struct net_device *dev, int new_mtu)
 	if (!netif_device_present(dev))
 		return -ENODEV;
 
-	err = 0;
-	if (ops->ndo_change_mtu)
-		err = ops->ndo_change_mtu(dev, new_mtu);
-	else
-		dev->mtu = new_mtu;
+	orig_mtu = dev->mtu;
+	err = __dev_set_mtu(dev, new_mtu);
 
-	if (!err && dev->flags & IFF_UP)
-		call_netdevice_notifiers(NETDEV_CHANGEMTU, dev);
+	if (!err) {
+		err = call_netdevice_notifiers(NETDEV_CHANGEMTU, dev);
+		err = notifier_to_errno(err);
+		if (err) {
+			/* setting mtu back and notifying everyone again,
+			 * so that they have a chance to revert changes.
+			 */
+			__dev_set_mtu(dev, orig_mtu);
+			call_netdevice_notifiers(NETDEV_CHANGEMTU, dev);
+		}
+	}
 	return err;
 }
 EXPORT_SYMBOL(dev_set_mtu);
@@ -6010,6 +6034,8 @@ int register_netdevice(struct net_device *dev)
 	ret = notifier_to_errno(ret);
 	if (ret) {
 		rollback_registered(dev);
+		rcu_barrier();
+
 		dev->reg_state = NETREG_UNREGISTERED;
 	}
 	/*

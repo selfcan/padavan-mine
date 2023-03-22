@@ -1,7 +1,8 @@
-SRC_NAME=libev-4.27
-SRC_URL=http://dist.schmorp.de/libev/libev-4.27.tar.gz
+SRC_NAME=libev-4.33
+SRC_URL=http://dist.schmorp.de/libev/libev-4.33.tar.gz
 
-all: download_test extract_test config_test
+#all: download_test extract_test config_test
+all: config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 download_test:
@@ -24,7 +25,9 @@ config_test:
 configure:
 	( cd $(SRC_NAME) ; \
 	./configure \
-		--prefix=$(STAGEDIR) \
+		--prefix= \
+		--enable-static \
+		--disable-shared \
 		--host=$(HOST_TARGET) \
 		--build=$(HOST_BUILD) ; \
 	)
@@ -36,7 +39,7 @@ clean:
 	rm -f config_done
 
 install:
-	$(MAKE) -C $(SRC_NAME) install DESTDIR=""
+	$(MAKE) -C $(SRC_NAME) install DESTDIR=$(STAGEDIR) ;
 
 romfs:
-	cp -fP $(DESTDIR)/lib/libev.so* $(ROMFSDIR)/lib
+

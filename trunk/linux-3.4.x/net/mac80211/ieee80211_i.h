@@ -46,12 +46,6 @@ struct ieee80211_local;
 #define IEEE80211_ENCRYPT_HEADROOM 8
 #define IEEE80211_ENCRYPT_TAILROOM 18
 
-/* IEEE 802.11 (Ch. 9.5 Defragmentation) requires support for concurrent
- * reception of at least three fragmented frames. This limit can be increased
- * by changing this define, at the cost of slower frame reassembly and
- * increased memory use (about 2 kB of RAM per entry). */
-#define IEEE80211_FRAGMENT_MAX 4
-
 #define TU_TO_EXP_TIME(x)	(jiffies + usecs_to_jiffies((x) * 1024))
 
 /*
@@ -76,18 +70,6 @@ struct ieee80211_local;
 
 #define IEEE80211_DEFAULT_MAX_SP_LEN		\
 	IEEE80211_WMM_IE_STA_QOSINFO_SP_ALL
-
-struct ieee80211_fragment_entry {
-	unsigned long first_frag_time;
-	unsigned int seq;
-	unsigned int rx_queue;
-	unsigned int last_frag;
-	unsigned int extra_len;
-	struct sk_buff_head skb_list;
-	int ccmp; /* Whether fragments were encrypted with CCMP */
-	u8 last_pn[6]; /* PN of the last fragment if CCMP was used */
-};
-
 
 struct ieee80211_bss {
 	/* don't want to look up all the time */
@@ -217,7 +199,6 @@ typedef unsigned __bitwise__ ieee80211_rx_result;
  * @IEEE80211_RX_RA_MATCH: frame is destined to interface currently processed
  *	(incl. multicast frames)
  * @IEEE80211_RX_IN_SCAN: received while scanning
- * @IEEE80211_RX_FRAGMENTED: fragmented frame
  * @IEEE80211_RX_AMSDU: a-MSDU packet
  * @IEEE80211_RX_MALFORMED_ACTION_FRM: action frame is malformed
  * @IEEE80211_RX_DEFERRED_RELEASE: frame was subjected to receive reordering
@@ -228,7 +209,6 @@ typedef unsigned __bitwise__ ieee80211_rx_result;
 enum ieee80211_packet_rx_flags {
 	IEEE80211_RX_IN_SCAN			= BIT(0),
 	IEEE80211_RX_RA_MATCH			= BIT(1),
-	IEEE80211_RX_FRAGMENTED			= BIT(2),
 	IEEE80211_RX_AMSDU			= BIT(3),
 	IEEE80211_RX_MALFORMED_ACTION_FRM	= BIT(4),
 	IEEE80211_RX_DEFERRED_RELEASE		= BIT(5),
@@ -273,8 +253,15 @@ struct ieee80211_rx_data {
 	 */
 	int security_idx;
 
-	u32 tkip_iv32;
-	u16 tkip_iv16;
+	union {
+		struct {
+			u32 iv32;
+			u16 iv16;
+		} tkip;
+		struct {
+			u8 pn[CCMP_PN_LEN];
+		} ccm_gcm;
+	};
 };
 
 struct beacon_data {
@@ -689,9 +676,7 @@ struct ieee80211_sub_if_data {
 	/* to detect idle changes */
 	bool old_idle;
 
-	/* Fragment table for host-based reassembly */
-	struct ieee80211_fragment_entry	fragments[IEEE80211_FRAGMENT_MAX];
-	unsigned int fragment_next;
+	struct ieee80211_fragment_cache frags;
 
 	/* TID bitmap for NoAck policy */
 	u16 noack_map;
@@ -1528,5 +1513,8 @@ enum nl80211_channel_type ieee80211_get_tx_channel_type(
 #else
 #define debug_noinline
 #endif
+
+void ieee80211_init_frag_cache(struct ieee80211_fragment_cache *cache);
+void ieee80211_destroy_frag_cache(struct ieee80211_fragment_cache *cache);
 
 #endif /* IEEE80211_I_H */

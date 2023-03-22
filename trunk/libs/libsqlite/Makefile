@@ -1,7 +1,8 @@
-SRC_NAME=sqlite-autoconf-3260000
-SRC_URL=https://www.sqlite.org/2018/$(SRC_NAME).tar.gz
+SRC_NAME=sqlite-autoconf-3410000
+SRC_URL=https://www.sqlite.org/2023/$(SRC_NAME).tar.gz
 
-all: download_test extract_test config_test
+#all: download_test extract_test config_test
+all: config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 download_test:
@@ -24,10 +25,11 @@ config_test:
 configure:
 	( cd $(SRC_NAME) ; \
 	./configure \
-		--prefix=$(STAGEDIR) \
+		--prefix= \
 		$(if $(LIBS_BUILD_SHARED),--disable-static,--enable-static) \
 		$(if $(LIBS_BUILD_SHARED),--enable-shared,--disable-shared) \
 		--disable-readline \
+		--disable-editline \
 		--disable-dynamic-extensions \
 		--disable-fts3 \
 		--disable-fts4 \
@@ -48,7 +50,7 @@ clean:
 	rm -f config_done
 
 install:
-	$(MAKE) -C $(SRC_NAME) install DESTDIR=""
+	$(MAKE) -C $(SRC_NAME) install DESTDIR=$(STAGEDIR)
 
 romfs:
 ifeq ($(LIBS_BUILD_SHARED),y)

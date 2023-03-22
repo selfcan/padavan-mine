@@ -1,36 +1,48 @@
-SRC_NAME=openssl-1.1.1k
+SRC_NAME=openssl-1.1.1t
 SRC_URL=https://www.openssl.org/source/$(SRC_NAME).tar.gz
 
 # openssl use CROSS_COMPILE prefix
-CC = gcc
-AR = ar
-RANLIB = ranlib
-CXX = g++
+CC=gcc $(CPUFLAGS)
+CXX=g++ $(CPUFLAGS)
+AR=ar
+RANLIB=ranlib
 
-COPTS = $(CPUFLAGS) -O3 $(filter-out -O%, $(CFLAGS))
-COPTS += $(if $(CONFIG_IPV6),-DOPENSSL_USE_IPV6=1,)
-COPTS += -DOPENSSL_PREFER_CHACHA_OVER_GCM
+COPTS=$(CFLAGS) -Os
+COPTS+=$(if $(CONFIG_IPV6),-DOPENSSL_USE_IPV6=1,)
+COPTS+=-DOPENSSL_SMALL_FOOTPRINT
+COPTS+=-DOPENSSL_PREFER_CHACHA_OVER_GCM
 
-CFLAGS := $(COPTS)
-CXXFLAGS := $(COPTS)
+LOPTS=-Wl,--gc-sections -L$(DESTDIR)/lib
 
-OPENSSL_CIPHERS = no-capieng no-cms no-rfc3779 no-seed \
-  no-ec2m no-err no-threads no-idea no-rc5 no-rmd160 \
-  no-static-engine no-md2 no-sse2 no-dso no-ts no-mdc2 \
-  no-cast no-whirlpool no-sctp no-srp no-ssl2 no-ssl3 \
-  no-async no-blake2 no-hw-padlock no-aria no-hw \
-  no-devcryptoeng no-ssl3-method no-tests no-sm2 \
-  no-sm3 no-sm4 no-afalgeng no-comp
+OPENSSL_OPTIONS = no-capieng no-cms no-rfc3779 no-seed no-async \
+                  no-ec2m no-err no-idea no-rc5 no-rmd160 no-blake2 \
+                  no-static-engine no-hw-padlock no-md2 no-sse2 no-dso no-ts no-mdc2 \
+                  no-cast no-whirlpool no-sctp no-srp no-ssl3 \
+                  no-aria no-sm2 no-sm3 no-sm4
+
+ifneq ($(CONFIG_FIRMWARE_INCLUDE_TOR),y)
+OPENSSL_OPTIONS += no-threads
+endif
+
+#ifdef CONFIG_CRYPTO_DEV_LINUX
+#OPENSSL_OPTIONS += enable-devcryptoeng
+#else
+OPENSSL_OPTIONS += no-hw no-devcryptoeng
+ifneq ($(CONFIG_FIRMWARE_INCLUDE_TOR),y)
+OPENSSL_OPTIONS += no-engine
+endif
+#endif
 
 ifneq ($(CONFIG_FIRMWARE_INCLUDE_SSWAN),y)
-OPENSSL_CIPHERS += no-rc2
+OPENSSL_OPTIONS += no-rc2
 endif
 
-ifneq ($(CONFIG_FIRMWARE_INCLUDE_OPENSSL_EC),y)
-OPENSSL_CIPHERS += no-ec
+ifeq (,$(filter y,$(CONFIG_FIRMWARE_INCLUDE_OPENSSL_EC) $(CONFIG_FIRMWARE_INCLUDE_TOR)))
+OPENSSL_OPTIONS += no-ec
 endif
 
-all: download_test extract_test config_test
+#all: download_test extract_test config_test
+all: config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 download_test:
@@ -40,8 +52,8 @@ download_test:
 
 extract_test:
 	( if [ ! -d $(SRC_NAME) ]; then \
-		tar -xf $(SRC_NAME).tar.gz; \
-		patch -d $(SRC_NAME) -p1 < $(SRC_NAME).patch; \
+		tar zxf $(SRC_NAME).tar.gz; \
+		patch -d $(SRC_NAME) -p1 -i ../openssl-orig.patch; \
 	fi )
 
 config_test:
@@ -56,20 +68,21 @@ configure:
 	./Configure \
 		linux-mips32 \
 		shared \
-		--prefix=$(STAGEDIR) \
+		--prefix=/ \
 		--openssldir=/etc/ssl \
-		$(OPENSSL_CIPHERS) ; \
+		$(COPTS) \
+		$(LOPTS) \
+		$(OPENSSL_OPTIONS) ; \
 	)
 
 clean:
-	if [ -f $(SRC_NAME)/Makefile ] ; then \
-		$(MAKE) -C $(SRC_NAME) clean ; \
-	fi ; \
+	$(MAKE) -C $(SRC_NAME) distclean
 	rm -f config_done
 
 install:
-	$(MAKE) -C $(SRC_NAME) install_sw DESTDIR=""
+	$(MAKE) -C $(SRC_NAME) install_sw DESTDIR="$(STAGEDIR)"
 	$(MAKE) -C $(SRC_NAME) install_ssldirs DESTDIR="$(STAGEDIR)"
+	# remove unneeded
 	rm -f $(DESTDIR)/lib/libssl.a
 	rm -f $(DESTDIR)/lib/libcrypto.a
 
@@ -81,4 +94,3 @@ romfs:
 ifeq ($(CONFIG_FIRMWARE_INCLUDE_OPENSSL_EXE),y)
 	$(ROMFSINST) $(SRC_NAME)/apps/openssl /usr/bin/openssl
 endif
-

@@ -77,7 +77,7 @@ struct buffer *new_outgoing (struct tunnel *t)
 
 inline void recycle_outgoing (struct buffer *buf, struct sockaddr_in peer)
 {
-    /* 
+    /*
      * This should only be used for ZLB's!
      */
     buf->start = buf->rstart + sizeof (struct control_hdr);
@@ -90,7 +90,7 @@ void add_fcs (struct buffer *buf)
 {
     _u16 fcs = PPP_INITFCS;
     unsigned char *c = buf->start;
-    int x;
+    size_t x;
     for (x = 0; x < buf->len; x++)
     {
         fcs = PPP_FCS (fcs, *c);
@@ -201,7 +201,7 @@ int control_finish (struct tunnel *t, struct call *c)
     char dummy_buf[128] = "/var/l2tp/"; /* jz: needed to read /etc/ppp/var.options - just kick it if you don't like */
     char passwdfd_buf[32] = ""; /* buffer for the fd, not the password */
     int i;
-    int pppd_passwdfd[2];            
+    int pppd_passwdfd[2];
     int tmptid,tmpcid;
 
     if (c->msgtype < 0)
@@ -414,7 +414,7 @@ int control_finish (struct tunnel *t, struct call *c)
         /* FIXME: Do we need to be sure they specified a version number?
          *   Theoretically, yes, but we don't have anything in the code
          *   to actually *do* anything with it, so...why check at this point?
-         * We shouldn't be requiring a bearer capabilities AVP to be present in 
+         * We shouldn't be requiring a bearer capabilities AVP to be present in
          * SCCRQ and SCCRP as they aren't required
          if (t->bc < 0 ) {
          if (DEBUG) l2tp_log(LOG_DEBUG,
@@ -538,7 +538,7 @@ int control_finish (struct tunnel *t, struct call *c)
         /* FIXME: Do we need to be sure they specified a version number?
          *   Theoretically, yes, but we don't have anything in the code
          *   to actually *do* anything with it, so...why check at this point?
-         * We shouldn't be requiring a bearer capabilities AVP to be present in 
+         * We shouldn't be requiring a bearer capabilities AVP to be present in
          * SCCRQ and SCCRP as they aren't required
          if (t->bc < 0 ) {
          if (DEBUG) log(LOG_DEBUG,
@@ -643,7 +643,6 @@ int control_finish (struct tunnel *t, struct call *c)
             magic_lac_dial (t->lac);
         }
         break;
-#ifndef DISABLE_OCRP_OCCN
     case SCCCN:
         if (t->chal_them.state)
         {
@@ -678,7 +677,6 @@ int control_finish (struct tunnel *t, struct call *c)
 #endif
         t->hello = schedule (tv, hello, (void *) t);
         break;
-#endif
     case StopCCN:
         if (t->qtid < 0)
         {
@@ -737,7 +735,7 @@ int control_finish (struct tunnel *t, struct call *c)
                 l2tp_log (LOG_DEBUG,
                      "%s: Peer tried to initiate call without call ID\n",
                      __FUNCTION__);
-            /* Here it doesn't make sense to use the needclose flag because 
+            /* Here it doesn't make sense to use the needclose flag because
                the call p did not receive any packets */
             call_close (p);
             return -EINVAL;
@@ -827,10 +825,10 @@ int control_finish (struct tunnel *t, struct call *c)
             return -EINVAL;
         }
         c->state = ICCN;
-        if (t->fc & ASYNC_FRAMING)
-            c->frame = ASYNC_FRAMING;
-        else
+        if (t->fc & SYNC_FRAMING)
             c->frame = SYNC_FRAMING;
+        else
+            c->frame = ASYNC_FRAMING;
 
         buf = new_outgoing (t);
         add_message_type_avp (buf, ICCN);
@@ -843,10 +841,12 @@ int control_finish (struct tunnel *t, struct call *c)
         add_frame_avp (buf, c->frame);
 /*		if (c->ourrws >= 0)
 			add_avp_rws(buf, c->ourrws); */
+#ifndef CONFIG_WATCHDOG_FIREWALL
         /* FIXME: Packet Processing Delay */
         /* We don't need any kind of proxy PPP stuff */
         /* Can we proxy authenticate ourselves??? */
         add_rxspeed_avp (buf, t->rxspeed);
+#endif
 /* add_seqreqd_avp (buf); *//* We don't have sequencing code, so
  * don't ask for sequencing */
         add_control_hdr (t, c, buf);
@@ -901,7 +901,7 @@ int control_finish (struct tunnel *t, struct call *c)
             if (c->lac->debug)
                 po = add_opt (po, "debug");
             if (c->lac->password[0])
-            {                    
+            {
                 if (pipe (pppd_passwdfd) == -1)
                 {
                   l2tp_log (LOG_DEBUG,
@@ -1020,6 +1020,7 @@ int control_finish (struct tunnel *t, struct call *c)
             po = add_opt (po, "ipparam");
             po = add_opt (po, IPADDY (t->peer.sin_addr));
         }
+
         start_pppd (c, po);
         opt_destroy (po);
         l2tp_log (LOG_NOTICE,
@@ -1027,7 +1028,6 @@ int control_finish (struct tunnel *t, struct call *c)
              IPADDY (t->peer.sin_addr), c->pppd, c->ourcid, c->cid,
              c->serno);
         break;
-#ifndef DISABLE_OCRP_OCCN
     case OCRP:                 /* jz: nothing to do for OCRP, waiting for OCCN */
         break;
     case OCCN:                 /* jz: get OCCN, so the only thing we must do is to start the pppd */
@@ -1089,13 +1089,13 @@ int control_finish (struct tunnel *t, struct call *c)
         /*  jz: just show some information */
         l2tp_log (LOG_INFO,
 		  "parameters: Local: %d , Remote: %d , Serial: %d , Pid: %d , Tunnelid: %d , Phoneid: %s\n",
-		  c->ourcid, c->cid, c->serno, c->pppd, t->ourtid, c->dial_no); 
+		  c->ourcid, c->cid, c->serno, c->pppd, t->ourtid, c->dial_no);
 
         opt_destroy (po);
         if (c->lac)
             c->lac->rtries = 0;
         break;
-#endif
+
 
     case CDN:
         if (c->qcid < 0)
@@ -1204,13 +1204,11 @@ static inline int check_control (const struct buffer *buf, struct tunnel *t,
 #endif
     if (h->Ns != t->control_rec_seq_num)
     {
-#ifdef DEBUG_MORE
         if (DEBUG)
             l2tp_log (LOG_DEBUG,
                  "%s: Received out of order control packet on tunnel %d (got %d, expected %d)\n",
                  __FUNCTION__, t->tid, h->Ns, t->control_rec_seq_num);
-#endif
-        if (((h->Ns < t->control_rec_seq_num) && 
+        if (((h->Ns < t->control_rec_seq_num) &&
             ((t->control_rec_seq_num - h->Ns) < 32768)) ||
             ((h->Ns > t->control_rec_seq_num) &&
             ((t->control_rec_seq_num - h->Ns) > 32768)))
@@ -1225,15 +1223,12 @@ static inline int check_control (const struct buffer *buf, struct tunnel *t,
                 l2tp_log (LOG_DEBUG, "%s: Sending an updated ZLB in reponse\n",
                      __FUNCTION__);
 #endif
-
             if (buf->len != sizeof (struct control_hdr))
             {
                 /* don't send a ZLB in response to a ZLB. it leads to a loop */
                 zlb = new_outgoing (t);
                 control_zlb (zlb, t, c);
-#ifndef FIX_ZLB
-                udp_xmit (zlb, t);
-#endif
+                /*udp_xmit (zlb, t);*/
                 toss (zlb);
             }
         }
@@ -1319,7 +1314,7 @@ static inline int check_payload (struct buffer *buf, struct tunnel *t,
      * or not.  Returns 0 on success.
      */
 
-    int ehlen = MIN_PAYLOAD_HDR_LEN;
+    size_t ehlen = MIN_PAYLOAD_HDR_LEN;
     struct payload_hdr *h = (struct payload_hdr *) (buf->start);
     if (!c)
     {
@@ -1332,7 +1327,7 @@ static inline int check_payload (struct buffer *buf, struct tunnel *t,
     }
     if (buf->len < MIN_PAYLOAD_HDR_LEN)
     {
-        /* has to be at least MIN_PAYLOAD_HDR_LEN 
+        /* has to be at least MIN_PAYLOAD_HDR_LEN
            no matter what.  we'll look more later */
         if (DEBUG)
         {
@@ -1420,6 +1415,7 @@ static inline int check_payload (struct buffer *buf, struct tunnel *t,
 static inline int expand_payload (struct buffer *buf, struct tunnel *t,
                            struct call *c)
 {
+    UNUSED(t);
     /*
      * Expands payload header.  Does not check for valid header,
      * check_payload() should already be called as a prerequisite.
@@ -1513,9 +1509,9 @@ static inline int expand_payload (struct buffer *buf, struct tunnel *t,
     if (new_hdr->Ns != c->data_seq_num)
     {
         /* RFC1982-esque comparison of serial numbers */
-        if (((new_hdr->Ns < c->data_rec_seq_num) && 
+        if (((new_hdr->Ns < c->data_rec_seq_num) &&
             ((c->data_rec_seq_num - new_hdr->Ns) < 32768)) ||
-            ((new_hdr->Ns > c->data_rec_seq_num) && 
+            ((new_hdr->Ns > c->data_rec_seq_num) &&
             ((c->data_rec_seq_num - new_hdr->Ns) > 32768)))
         {
 #ifdef DEBUG_FLOW
@@ -1604,7 +1600,7 @@ static inline int write_packet (struct buffer *buf, struct tunnel *t, struct cal
      * Write a packet, doing sync->async conversion if
      * necessary
      */
-    int x;
+    size_t x;
     unsigned char e;
     int err;
     static unsigned char wbuf[MAX_RECV_SIZE];
@@ -1612,14 +1608,12 @@ static inline int write_packet (struct buffer *buf, struct tunnel *t, struct cal
 
     if (c->fd < 0)
     {
-#ifdef DEBUG_MORE
         if (DEBUG)
             l2tp_log (LOG_DEBUG, "%s: tty is not open yet.\n", __FUNCTION__);
-#endif
         return -EIO;
     }
     /*
-     * Skip over header 
+     * Skip over header
      */
     _u16 offset = ((struct payload_hdr*)(buf->start))->o_size;  // For FIXME:
     buf->start += sizeof(struct payload_hdr) + offset;
@@ -1636,17 +1630,17 @@ static inline int write_packet (struct buffer *buf, struct tunnel *t, struct cal
         /* We are given async frames, so write them
            directly to the tty */
         err = write (c->fd, buf->start, buf->len);
-        if (err == buf->len)
+        if ((size_t)err == buf->len)
         {
             return 0;
         }
-        else if (err == 0)
+        else if ((size_t)err == 0)
         {
             l2tp_log (LOG_WARNING, "%s: wrote no bytes of async packet\n",
                  __FUNCTION__);
             return -EINVAL;
         }
-        else if (err < 0)
+        else if ((ssize_t)err < 0)
         {
             if ((errno == EAGAIN) || (errno == EINTR))
             {
@@ -1658,13 +1652,13 @@ static inline int write_packet (struct buffer *buf, struct tunnel *t, struct cal
                      strerror (errno));
             }
         }
-        else if (err < buf->len)
+        else if ((size_t)err < buf->len)
         {
             l2tp_log (LOG_WARNING, "%s: short write (%d of %d bytes)\n", __FUNCTION__,
                  err, buf->len);
             return -EINVAL;
         }
-        else if (err > buf->len)
+        else if ((size_t)err > buf->len)
         {
             l2tp_log (LOG_WARNING, "%s: write returned LONGER than buffer length?\n",
                  __FUNCTION__);
@@ -1685,7 +1679,7 @@ static inline int write_packet (struct buffer *buf, struct tunnel *t, struct cal
     {
         // we must at least still have 3 bytes left in the worst case scenario:
         // 1 for a possible escape, 1 for the value and 1 to end the PPP stream.
-        if(pos >= (sizeof(wbuf) - 4)) {
+        if((size_t)pos >= (sizeof(wbuf) - 4)) {
             if(DEBUG)
                 l2tp_log(LOG_CRIT, "%s: rx packet is too big after PPP encoding (size %u, max is %u)\n",
                                 __FUNCTION__, buf->len, MAX_RECV_SIZE);
@@ -1711,7 +1705,7 @@ static inline int write_packet (struct buffer *buf, struct tunnel *t, struct cal
 #endif
 
     x = 0;
-    while ( pos != x )
+    while ((size_t) pos != x )
     {
       err = write (c->fd, wbuf+x, pos-x);
       if ( err < 0 ) {
@@ -1747,7 +1741,7 @@ int handle_special (struct buffer *buf, struct call *c, _u16 call)
     struct tunnel *t = c->container;
     /* Don't do anything unless it's a control packet */
     if (!CTBIT (*((_u16 *) buf->start)))
-        return -EINVAL;
+        return 0;
     /* Temporarily, we make the tunnel have cid of call instead of 0,
        but we need to stop any scheduled events (like Hello's in
        particular) which might use this value */
@@ -1759,19 +1753,16 @@ int handle_special (struct buffer *buf, struct call *c, _u16 call)
             /* If it's a ZLB, we ignore it */
             if (gconfig.debug_tunnel)
                 l2tp_log (LOG_DEBUG, "%s: ZLB for closed call\n", __FUNCTION__);
-            t->control_rec_seq_num--;
             c->cid = 0;
-            return 1;
+            return 0;
         }
         /* Make a packet with the specified call number */
         /* FIXME: If I'm not a CDN, I need to send a CDN */
         control_zlb (buf, t, c);
         c->cid = 0;
-#ifndef FIX_ZLB
-        udp_xmit (buf, t);
-#endif
+        /*udp_xmit (buf, t);*/
         toss (buf);
-        return 0;
+        return 1;
     }
     else
     {
@@ -1779,8 +1770,49 @@ int handle_special (struct buffer *buf, struct call *c, _u16 call)
         if (gconfig.debug_tunnel)
             l2tp_log (LOG_DEBUG, "%s: invalid control packet\n", __FUNCTION__);
     }
+    return 0;
+}
 
-    return -EINVAL;
+static int handle_control(struct buffer *buf, struct tunnel *t,
+                          struct call *c)
+{
+    /* We have a control packet */
+    if (check_control (buf, t, c))
+    {
+        l2tp_log (LOG_DEBUG, "%s: bad control packet!\n", __FUNCTION__);
+        return -EINVAL;
+    }
+
+    c->msgtype = -1;
+    if (buf->len == sizeof (struct control_hdr))
+    {
+    #ifdef DEBUG_ZLB
+        l2tp_log (LOG_DEBUG, "%s: control ZLB received\n", __FUNCTION__);
+    #endif
+        t->control_rec_seq_num--;
+        c->cnu = 0;
+        if (c->needclose && c->closing)
+        {
+            if (c->container->cLr >= c->closeSs)
+            {
+    #ifdef DEBUG_ZLB
+                l2tp_log (LOG_DEBUG, "%s: ZLB for closing message found\n",
+                     __FUNCTION__);
+    #endif
+                c->needclose = 0;
+                /* Trigger final closing of call */
+            }
+        }
+        return 0;
+    }
+
+    if (handle_avps (buf, t, c))
+    {
+        if (gconfig.debug_tunnel)
+            l2tp_log (LOG_DEBUG, "%s: bad AVP handling!\n", __FUNCTION__);
+        return -EINVAL;
+    }
+    return control_finish (t, c);
 }
 
 inline int handle_packet (struct buffer *buf, struct tunnel *t,
@@ -1793,155 +1825,109 @@ inline int handle_packet (struct buffer *buf, struct tunnel *t,
 #endif
 */
     if (CTBIT (*((_u16 *) buf->start)))
+        return handle_control(buf, t, c);
+
+    if (!check_payload (buf, t, c))
     {
-        /* We have a control packet */
-        if (!check_control (buf, t, c))
+        if (!expand_payload (buf, t, c))
         {
-            c->msgtype = -1;
-            if (buf->len == sizeof (struct control_hdr))
+            if (buf->len > sizeof (struct payload_hdr))
             {
-#ifdef DEBUG_ZLB
-                l2tp_log (LOG_DEBUG, "%s: control ZLB received\n", __FUNCTION__);
+/*				if (c->throttle) {
+					if (c->pSs > c->pLr + c->rws) {
+#ifdef DEBUG_FLOW
+						l2tp_log(LOG_DEBUG, "%s: not yet dethrottling call\n",__FUNCTION__);
 #endif
-                t->control_rec_seq_num--;
-                c->cnu = 0;
-                if (c->needclose && c->closing)
-                {
-                    if (c->container->cLr >= c->closeSs)
-                    {
-#ifdef DEBUG_ZLB
-                        l2tp_log (LOG_DEBUG, "%s: ZLB for closing message found\n",
-                             __FUNCTION__);
+					} else {
+#ifdef DEBUG_FLOW
+						l2tp_log(LOG_DEBUG, "%s: dethrottling call\n",__FUNCTION__);
 #endif
-                        c->needclose = 0;
-                        /* Trigger final closing of call */
-                    }
-                }
+						if (c->dethrottle) deschedule(c->dethrottle);
+						c->dethrottle=NULL;
+						c->throttle = 0;
+					}
+				} */
+/*	JLM				res = write_packet(buf,t,c, c->frame & SYNC_FRAMING); */
+                res = write_packet (buf, t, c, SYNC_FRAMING);
+                if (res)
+                    return res;
+                /*
+                   * Assuming we wrote to the ppp driver okay, we should
+                   * do something about ZLB's unless *we* requested no
+                   * window size or if they we have turned off our fbit.
+                 */
+
+/*					if (c->ourfbit && (c->ourrws > 0)) {
+					if (c->pSr >= c->prx + c->ourrws - 2) {
+					We've received enough to fill our receive window.  At
+					this point, we should immediately send a ZLB!
+#ifdef DEBUG_ZLB
+						l2tp_log(LOG_DEBUG, "%s: Sending immediate ZLB!\n",__FUNCTION__);
+#endif
+						if (c->zlb_xmit) {
+						Deschedule any existing zlb_xmit's
+							deschedule(c->zlb_xmit);
+							c->zlb_xmit = NULL;
+						}
+						send_zlb((void *)c);
+					} else {
+					struct timeval tv;
+					We need to schedule sending a ZLB.  FIXME:  Should
+					be 1/4 RTT instead, when rate adaptive stuff is
+					in place. Spec allows .5 seconds though
+						tv.tv_sec = 0;
+						tv.tv_usec = 500000;
+						if (c->zlb_xmit)
+							deschedule(c->zlb_xmit);
+#ifdef DEBUG_ZLB
+						l2tp_log(LOG_DEBUG, "%s: scheduling ZLB\n",__FUNCTION__);
+#endif
+						c->zlb_xmit = schedule(tv, &send_zlb, (void *)c);
+					}
+				} */
                 return 0;
             }
-            else if (!handle_avps (buf, t, c))
+            else if (buf->len == sizeof (struct payload_hdr))
             {
-                return control_finish (t, c);
+#ifdef DEBUG_ZLB
+                l2tp_log (LOG_DEBUG, "%s: payload ZLB received\n",
+                     __FUNCTION__);
+#endif
+/*					if (c->throttle) {
+					if (c->pSs > c->pLr + c->rws) {
+#ifdef DEBUG_FLOW
+						l2tp_log(LOG_DEBUG, "%s: not yet dethrottling call\n",__FUNCTION__);
+#endif
+					} else {
+#ifdef DEBUG_FLOW
+						l2tp_log(LOG_DEBUG, "%s: dethrottling call\n",__FUNCTION__);
+#endif
+						if (c->dethrottle)
+							deschedule(c->dethrottle);
+						c->dethrottle=NULL;
+						c->throttle = 0;
+					}
+				} */
+                c->data_rec_seq_num--;
+                return 0;
             }
             else
             {
-                if (gconfig.debug_tunnel)
-                    l2tp_log (LOG_DEBUG, "%s: bad AVP handling!\n", __FUNCTION__);
+                l2tp_log (LOG_DEBUG, "%s: payload too small!\n", __FUNCTION__);
                 return -EINVAL;
             }
         }
         else
         {
-#ifdef DEBUG_MORE
-            l2tp_log (LOG_DEBUG, "%s: bad control packet!\n", __FUNCTION__);
-#endif
+            if (gconfig.debug_tunnel)
+                l2tp_log (LOG_DEBUG, "%s: unable to expand payload!\n",
+                     __FUNCTION__);
             return -EINVAL;
         }
     }
     else
     {
-        if (!check_payload (buf, t, c))
-        {
-            if (!expand_payload (buf, t, c))
-            {
-                if (buf->len > sizeof (struct payload_hdr))
-                {
-/*					if (c->throttle) {
-						if (c->pSs > c->pLr + c->rws) {
-#ifdef DEBUG_FLOW
-							l2tp_log(LOG_DEBUG, "%s: not yet dethrottling call\n",__FUNCTION__);
-#endif
-						} else {
-#ifdef DEBUG_FLOW
-							l2tp_log(LOG_DEBUG, "%s: dethrottling call\n",__FUNCTION__);
-#endif
-							if (c->dethrottle) deschedule(c->dethrottle);
-							c->dethrottle=NULL;
-							c->throttle = 0;
-						}
-					} */
-/*	JLM				res = write_packet(buf,t,c, c->frame & SYNC_FRAMING); */
-                    res = write_packet (buf, t, c, SYNC_FRAMING);
-                    if (res)
-                        return res;
-                    /* 
-                       * Assuming we wrote to the ppp driver okay, we should
-                       * do something about ZLB's unless *we* requested no
-                       * window size or if they we have turned off our fbit. 
-                     */
-
-/*					if (c->ourfbit && (c->ourrws > 0)) {
-						if (c->pSr >= c->prx + c->ourrws - 2) {
-						We've received enough to fill our receive window.  At
-						this point, we should immediately send a ZLB!
-#ifdef DEBUG_ZLB
-							l2tp_log(LOG_DEBUG, "%s: Sending immediate ZLB!\n",__FUNCTION__);
-#endif
-							if (c->zlb_xmit) {
-							Deschedule any existing zlb_xmit's
-								deschedule(c->zlb_xmit);
-								c->zlb_xmit = NULL;
-							}
-							send_zlb((void *)c);
-						} else {
-						struct timeval tv;
-						We need to schedule sending a ZLB.  FIXME:  Should
-						be 1/4 RTT instead, when rate adaptive stuff is
-						in place. Spec allows .5 seconds though
-							tv.tv_sec = 0;
-							tv.tv_usec = 500000;
-							if (c->zlb_xmit)
-								deschedule(c->zlb_xmit);
-#ifdef DEBUG_ZLB
-							l2tp_log(LOG_DEBUG, "%s: scheduling ZLB\n",__FUNCTION__);
-#endif
-							c->zlb_xmit = schedule(tv, &send_zlb, (void *)c);
-						}
-					} */
-                    return 0;
-                }
-                else if (buf->len == sizeof (struct payload_hdr))
-                {
-#ifdef DEBUG_ZLB
-                    l2tp_log (LOG_DEBUG, "%s: payload ZLB received\n",
-                         __FUNCTION__);
-#endif
-/*					if (c->throttle) {
-						if (c->pSs > c->pLr + c->rws) {
-#ifdef DEBUG_FLOW
-							l2tp_log(LOG_DEBUG, "%s: not yet dethrottling call\n",__FUNCTION__);
-#endif
-						} else {
-#ifdef DEBUG_FLOW
-							l2tp_log(LOG_DEBUG, "%s: dethrottling call\n",__FUNCTION__);
-#endif
-							if (c->dethrottle)
-								deschedule(c->dethrottle);
-							c->dethrottle=NULL;
-							c->throttle = 0;
-						}
-					} */
-                    c->data_rec_seq_num--;
-                    return 0;
-                }
-                else
-                {
-                    l2tp_log (LOG_DEBUG, "%s: payload too small!\n", __FUNCTION__);
-                    return -EINVAL;
-                }
-            }
-            else
-            {
-                if (gconfig.debug_tunnel)
-                    l2tp_log (LOG_DEBUG, "%s: unable to expand payload!\n",
-                         __FUNCTION__);
-                return -EINVAL;
-            }
-        }
-        else
-        {
-            l2tp_log (LOG_DEBUG, "%s: invalid payload packet!\n", __FUNCTION__);
-            return -EINVAL;
-        }
+        l2tp_log (LOG_DEBUG, "%s: invalid payload packet!\n", __FUNCTION__);
+        return -EINVAL;
     }
 }

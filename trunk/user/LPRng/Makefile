@@ -63,6 +63,9 @@ FILES=./postinstall ./preremove ./postremove ./lpd.conf
 ALLDIRS= ${DIRS} ${SRC}/TESTSUPPORT ${SRC}/DOCS
 ROMFSDIR = $(ROOTDIR)/romfs
 
+CFLAGS  += -ffunction-sections -fdata-sections -fvisibility=hidden
+LDFLAGS += -Wl,--gc-sections
+
 ###############################################################################
 
 all: ${DIRS} ${FILES}

@@ -20,10 +20,10 @@ include $(ARCH_CONFIG)
 
 VEND=$(ROOTDIR)/vendors
 
-dir_v := $(VEND)/$(CONFIG_VENDOR)/.
+dir_v := $(VEND)/Mediatek/.
 
 # Note: the all and clean targets are not normally used,
 # since user/Makefile jumps directory to the product directory
-all image clean romfs romfs.post:
+all image clean romfs romfs.post modules.archive:
 	$(MAKE) -C $(dir_v) dir_v=$(dir_v) -f $(VEND)/vendors-common.mak $@
 

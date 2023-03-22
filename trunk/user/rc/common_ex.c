@@ -17,6 +17,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <errno.h>
 #include <time.h>
 #include <signal.h>
@@ -119,21 +120,14 @@ mac_conv2(const char *mac_nvkey, int idx, char *buf)
 	return (buf);
 }
 
-int
-valid_subver(char subfs)
-{
-	printf("validate subfs: %c\n", subfs);	// tmp test
-	if(((subfs >= 'a') && (subfs <= 'z' )) || ((subfs >= 'A') && (subfs <= 'Z' )))
-		return 1;
-	else
-		return 0;
-}
-
 void
 get_eeprom_params(void)
 {
 #if defined (VENDOR_ASUS)
 	int i;
+#endif
+#if defined (VENDOR_TPLINK)
+	unsigned char buffer_compare[32];
 #endif
 	int i_offset, i_ret;
 	unsigned char buffer[32];
@@ -146,14 +140,41 @@ get_eeprom_params(void)
 	char regspec_code[8];
 	char wps_pin[12];
 	char productid[16];
-	char fwver[16], fwver_sub[32];
+	char fwver[10], fwver_sub[36];
 
+	memset(buffer, 0xff, ETHER_ADDR_LEN);
+#if defined (VENDOR_TPLINK)
+	i_ret = flash_mtd_read("Romfile", 0xf100, buffer, ETHER_ADDR_LEN);
+	// Try Factory partition
+	if (i_ret < 0)
+		i_ret = flash_mtd_read(MTD_PART_NAME_FACTORY, 0xf100, buffer, ETHER_ADDR_LEN);
+	if (i_ret >=0 && !(buffer[0] & 0x01)) {
+		ether_etoa(buffer, macaddr_lan);
+		ether_etoa(buffer, macaddr_rt);
+		i_ret = flash_mtd_read(MTD_PART_NAME_FACTORY, OFFSET_MAC_ADDR_WSOC, buffer_compare, ETHER_ADDR_LEN);
+		if (i_ret >= 0 && memcmp(buffer, buffer_compare, ETHER_ADDR_LEN) != 0) {
+			// write mac to ralink eeprom 2,4 Ghz
+			flash_mtd_write(MTD_PART_NAME_FACTORY, OFFSET_MAC_ADDR_WSOC, buffer, ETHER_ADDR_LEN);
+		}
+		buffer[5] += 1;
+		ether_etoa(buffer, macaddr_wan);
+		buffer[5] -= 2;
+		ether_etoa(buffer, macaddr_wl);
+#if defined (BOARD_HAS_5G_RADIO)
+		i_ret = flash_mtd_read(MTD_PART_NAME_FACTORY, OFFSET_MAC_ADDR_INIC, buffer_compare, ETHER_ADDR_LEN);
+		if (i_ret >= 0 && memcmp(buffer, buffer_compare, ETHER_ADDR_LEN) != 0) {
+			// write mac to ralink eeprom 5 Ghz
+			flash_mtd_write(MTD_PART_NAME_FACTORY, OFFSET_MAC_ADDR_INIC, buffer, ETHER_ADDR_LEN);
+		}
+#endif
+	} else {
+		// no Romfile partition or error. Switch to ralink standart
+#endif
 #if (BOARD_5G_IN_SOC || !BOARD_HAS_5G_RADIO)
 	i_offset = OFFSET_MAC_ADDR_WSOC;
 #else
 	i_offset = OFFSET_MAC_ADDR_INIC;
 #endif
-	memset(buffer, 0xff, ETHER_ADDR_LEN);
 	i_ret = flash_mtd_read(MTD_PART_NAME_FACTORY, i_offset, buffer, ETHER_ADDR_LEN);
 	if (i_ret >= 0 && !(buffer[0] & 0x01))
 		ether_etoa(buffer, macaddr_wl);
@@ -209,6 +230,9 @@ get_eeprom_params(void)
 			ether_etoa(buffer, macaddr_wan);
 		}
 	}
+#if defined (VENDOR_TPLINK)
+	}
+#endif
 
 	nvram_set_temp("il0macaddr", macaddr_lan); // LAN
 	nvram_set_temp("il1macaddr", macaddr_wan); // WAN
@@ -252,7 +276,7 @@ get_eeprom_params(void)
 			if ((unsigned char)regspec_code[i] > 0x7f)
 				regspec_code[i] = 0;
 		}
-		
+
 		if (!check_regspec_code(regspec_code))
 			strcpy(regspec_code, "CE");
 	}
@@ -299,38 +323,32 @@ get_eeprom_params(void)
 		}
 	}
 #endif
-
-	/* read firmware header */
+	/* build firmware vesion vars */
+	snprintf(productid, sizeof(productid), "%s", BOARD_PID);
+#if defined(FWVERSTR)
+	if (sizeof(FWVERSTR) > 0 && sizeof(FWVERSTR) <= 9) {
+		// check if FWVERSTR have subversion code
+		strcpy(fwver_sub, FWVERSTR);
+		strcpy(fwver, fwver_sub);
+		// remove alphabet code from fwver if exist
+		if (isalpha(fwver[sizeof(FWVERSTR) - 2]))
+			fwver[sizeof(FWVERSTR) - 2] = 0;
+	} else {
+#endif
 	strcpy(fwver, "3.0.0.0");
 	strcpy(fwver_sub, fwver);
-	snprintf(productid, sizeof(productid), "%s", BOARD_PID);
-	memset(buffer, 0, sizeof(buffer));
-	i_ret = flash_mtd_read(MTD_PART_NAME_KERNEL, 0x20, buffer, 32);
-	if (i_ret < 0) {
-		nvram_set_temp("productid", "unknown");
-		nvram_set_temp("firmver", "unknown");
-	} else {
-		strncpy(productid, buffer + 4, 12);
-		productid[12] = 0;
-		
-		if(valid_subver(buffer[27]))
-			sprintf(fwver_sub, "%d.%d.%d.%d%c", buffer[0], buffer[1], buffer[2], buffer[3], buffer[27]);
-		else
-			sprintf(fwver_sub, "%d.%d.%d.%d", buffer[0], buffer[1], buffer[2], buffer[3]);
-		
-		sprintf(fwver, "%d.%d.%d.%d", buffer[0], buffer[1], buffer[2], buffer[3]);
+#if defined(FWVERSTR)
 	}
-
+#endif
 #if defined(FWBLDSTR)
-	if (strlen(FWBLDSTR) > 0 && strlen(FWBLDSTR) <= 4) {
-		strcat(fwver_sub, "-");
-		strcat(fwver_sub, FWBLDSTR);
+	if (sizeof(FWBLDSTR) > 0 && sizeof(FWBLDSTR) <= 4) {
+		strcat(fwver_sub, "-"FWBLDSTR);
 	}
 #endif
 #if defined(FWREVSTR)
-	if (strlen(FWREVSTR) > 0 && strlen(FWREVSTR) <= 8) {
-		strcat(fwver_sub, "_");
-		strcat(fwver_sub, FWREVSTR);
+	if (sizeof(FWREVSTR) > 0) {
+		// copy only 7 symbols of revision version
+		strncat(fwver_sub, "_"FWREVSTR, 8);
 	}
 #endif
 	nvram_set_temp("productid", trim_r(productid));
@@ -349,6 +367,8 @@ get_eeprom_params(void)
 #endif
 #endif
 
+#if defined (USE_MT7615_AP)
+	// TXBF, not used yet
 	{
 		int i, count_0xff = 0;
 		unsigned char txbf_para[33];
@@ -362,10 +382,10 @@ get_eeprom_params(void)
 					count_0xff++;
 			}
 		}
-		
+
 		nvram_wlan_set_int(1, "txbf_en", (count_0xff == 33) ? 0 : 1);
 	}
-
+#endif
 }
 
 void
@@ -838,7 +858,7 @@ rename_if_dir_exist(const char *dir, const char *subdir)
 {
 	DIR *dirp;
 	struct dirent *direntp;
-	char oldpath[257], newpath[257];
+	char oldpath[64], newpath[64];
 
 	if (!dir || !subdir)
 		return 0;
@@ -864,7 +884,7 @@ if_dircase_exist(const char *dir, const char *subdir)
 {
 	DIR *dirp;
 	struct dirent *direntp;
-	char oldpath[257];
+	char oldpath[64];
 
 	if (!dir || !subdir)
 		return NULL;

@@ -1,7 +1,8 @@
-SRC_NAME=libpcap-1.9.1
-SRC_URL=http://www.tcpdump.org/release/$(SRC_NAME).tar.gz
+SRC_NAME=libpcap-1.10.3
+SRC_URL=https://www.tcpdump.org/release/$(SRC_NAME).tar.gz
 
-all: download_test extract_test config_test
+#all: download_test extract_test config_test
+all: config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 download_test:
@@ -25,20 +26,22 @@ configure:
 	( cd $(SRC_NAME) ; \
 	ac_cv_netfilter_can_compile=no \
 	./configure \
-		--prefix=$(STAGEDIR) \
-		--enable-static \
-		--enable-shared \
+		--prefix= \
+		--disable-shared \
 		$(if $(CONFIG_IPV6),--enable-ipv6,--disable-ipv6) \
 		--disable-yydebug \
-		--disable-dbus \
 		--disable-usb \
+		--disable-dbus \
 		--disable-bluetooth \
+		--disable-netmap \
+		--disable-rdma \
 		--with-pcap=linux \
 		--without-flex \
 		--without-bison \
 		--without-dag \
 		--without-septel \
 		--without-libnl \
+		--without-snf \
 		--host=$(HOST_TARGET) \
 		--build=$(HOST_BUILD) ; \
 	)
@@ -50,7 +53,8 @@ clean:
 	rm -f config_done
 
 install:
-	$(MAKE) -C $(SRC_NAME) install DESTDIR=""
+	$(MAKE) -C $(SRC_NAME) install DESTDIR=$(STAGEDIR) ;
+	rm -f $(DESTDIR)/lib/libpcap.so* ;
 
 romfs:
-	cp -fP $(DESTDIR)/lib/libpcap.so* $(ROMFSDIR)/lib
+

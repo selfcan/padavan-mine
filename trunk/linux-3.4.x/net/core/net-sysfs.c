@@ -1329,6 +1329,9 @@ static int register_queue_kobjects(struct net_device *net)
 error:
 	netdev_queue_update_kobjects(net, txq, 0);
 	net_rx_queue_update_kobjects(net, rxq, 0);
+#ifdef CONFIG_SYSFS
+	kset_unregister(net->queues_kset);
+#endif
 	return error;
 }
 
@@ -1377,7 +1380,6 @@ struct kobj_ns_type_operations net_ns_type_operations = {
 };
 EXPORT_SYMBOL_GPL(net_ns_type_operations);
 
-#ifdef CONFIG_HOTPLUG
 static int netdev_uevent(struct device *d, struct kobj_uevent_env *env)
 {
 	struct net_device *dev = to_net_dev(d);
@@ -1396,7 +1398,6 @@ static int netdev_uevent(struct device *d, struct kobj_uevent_env *env)
 exit:
 	return retval;
 }
-#endif
 
 /*
  *	netdev_release -- destroy and free a dead device.
@@ -1425,9 +1426,7 @@ static struct class net_class = {
 #ifdef CONFIG_SYSFS
 	.dev_attrs = net_class_attributes,
 #endif /* CONFIG_SYSFS */
-#ifdef CONFIG_HOTPLUG
 	.dev_uevent = netdev_uevent,
-#endif
 	.ns_type = &net_ns_type_operations,
 	.namespace = net_namespace,
 };

@@ -1,3 +1,134 @@
+v1.3.18 (Nov 01, 2022)
+* Set default debian branch [Samuel Thibault]
+* watch: Turn rc version piece into ~rc [Samuel Thibault]
+* upload [Samuel Thibault]
+* Fix changelog [Samuel Thibault]
+* control: Make Multi-Arch: foreign [Samuel Thibault]
+* Add support for Ubuntu Jammy (22.04) when testing with travis.yml [Samir Hussain]
+* Update control.c [Lőrinczy, Zsigmond]
+* Update issue templates [Samir]
+* Add compatability information for Watchguard Firewall [Samir Hussain]
+* Adding documentation on common scnerios and how to address them [Samir Hussain]
+* Fix issue where in some cases xl2tpd stops trying to connect if it can not resolve server name (DNS failure or WAN temporarily unavailable), even if autodial and redial options are set. [Samir Hussain]
+* Modify debian/xl2tpd.service to use network-online.target [Samir Hussain]
+* man page: leave the original phrasing for what xl2tpd is [Alexander Naumov]
+* typo fix [Alexander Naumov]
+* update man-pages [Alexander Naumov]
+* Updating README.md [Samir Hussain]
+* Add documentation to warn users to comment out: Wants=ipsec.service in the xl2pd.service file [Samir Hussain]
+* Update VERSION to 1.3.18dev1 [Samir Hussain]
+* control: Bump Standards-Version to 4.6.0 (no change) [Samuel Thibault]
+* Play cat and mice again with lintian warning suppression [Samuel Thibault]
+
+v1.3.17 (Jan 20, 2022)
+* debian: Add systemd .service [Will Thompson]
+* Update TODO file to specify branch work that needs to be completed [Samir Hussain]
+* Correct a typo in the man page xl2tpd.conf(5) [Samy Mahmoudi]
+* xl2tpd-control: fix typo in usage [Yousong Zhou]
+* Updating debian changelog description [Samir Hussain]
+* control: Fix branch of Vcs-Git [Samuel Thibault]
+* upload [Samuel Thibault]
+* Drop unused lintian warning that produces a lintian error [Samuel Thibault]
+* Update xl2tpd.doc to use README.md [Samir Hussain]
+* Drop patch that cannot be applied any more [Samuel Thibault]
+* Bump debhelper from 10 to 12 [Samuel Thibault]
+* control: Bump Standards-Version to 4.5.0 [Samuel Thibault]
+* Really move changes to patch series [Samuel Thibault]
+* Move c0cce208e4a5 to patch series [Samuel Thibault]
+* upload [Samuel Thibault]
+* Close bug [Samuel Thibault]
+* Use https URL. [Samuel Thibault]
+
+v1.3.16 (October 23, 2020)
+* Re-add braces for if-else that have only statement [Samir Hussain]
+* xl2tpd-control refactoring [Alexander Naumov]
+* fix travis 'script' syntax [Alexander Naumov]
+* adding xl2tpd-control tests to travis [Alexander Naumov]
+* Re-adding text giving more inofrmation about using ipsec with xl2tpd [Samir Hussain]
+* Update README: typo, links to RFC, link to travis [Alexander Naumov]
+* Travis will test different compiler on linux distro [Samir Hussain]
+* Update travis for proper matrix [Samir Hussain]
+* Add Focal to travis testing [Samir Hussain]
+* yet another man-page update [Alexander Naumov]
+* update man-pages, fix typo [Alexander Naumov]
+* set_flow: result of operation is garbage or undefined [Alexander Naumov]
+* Update README [Alexander Naumov]
+* adding xl2tpd.init.patch [Alexander Naumov]
+* adding Makefile.patch [Alexander Naumov]
+* moving changes to separate file [Alexander Naumov]
+* sync/update spec file with official SUSE version [Alexander Naumov]
+* Set IP_PKTINFO even if setting of IPPROTO_IP fails (as it was in 1.3.9) [shadyhh]
+* Update .gitignore vim swap file [Samir Hussain]
+* Travis will test supported Ubuntu LTS distros [Samir Hussain]
+* Updating COMPATABILITY_ISSUES with info on Miktrotik servers [Samir Hussain]
+* Add work around for Android 10 maxium retries in COMPATIBILITY_ISSUES [Samir Hussain]
+* Add compatability issues with Ciso ASA [Samir Hussain]
+
+v1.3.15 (October 13, 2019)
+* Fix spacing of CONTRIBUTION.md [Samir Hussain]
+* Add CONTRIBUTION.md [Samir Hussain]
+* Specify missing log arguments [Patch by github user: 川島和津実]
+* Use matrix for .travis.yaml to test for multiple Linux distro [Samir Hussain]
+* Fixing .travis.yaml spacing warning [Samir Hussain]
+* Sockopt bug fix for multiple IP's [JDTX]
+* Add Clang as compiler test for travis [Samir Hussain]
+* Add info on building and installing xl2tpd [Samir Hussain]
+
+v1.3.14 (April 17, 2019)
+* osport.h: replace SUSv3-specific functions by POSIX variants [Fabrice Fontaine]
+* avp: Error Code field in Result Code AVP is optional [Pau Espin Pedrol]
+* network_thread: Early continue in loop to remove huge indented block [Pau Espin Pedrol]
+*  network_thread: Simplify while loop using for loop [Pau Espin Pedrol]
+* network: connect_pppol2tp: early return to avoid huge indentation block [Pau Espin Pedrol]
+* xl2tpd: start_pppd: Fix truncation of last character [Pau Espin Pedrol]
+* handle_packet: Remove unneded else clause when handling payload [Pau Espin Pedrol]
+* control: Split control message handling into its own function [Pau Espin Pedrol]
+* handle_packet: Rearrange code flow to simplify it [Pau Espin Pedrol]
+* avp: Early failure if no handler to remove indent block [Pau Espin Pedrol]
+* xl2tpd: Mark internal symbols as static [Pau Espin Pedrol]
+* Fix indentation and whitespace in code block [Pau Espin Pedrol]
+* xl2tpd: Remove unused variable [Pau Espin Pedrol]
+* network: Add missing close(kernel_fd) on init network failure [Pau Espin Pedrol]
+* network: Add missing close(server_fd) on init network failure [Pau Espin Pedrol]
+* Add 'cap backoff' option, limiting exponential backoff retries will
+  be delayed by exponentially longer time, unless that time is capped
+  by configuration. [Bart Trojanowski]
+* Add program to show status icon in system tray. [Github user: username34]
+* Add info on building and installing xl2tpd [Samir Hussain]
+* Update formatting of README.md [Samir Hussain]
+* Rename README.xl2tpd to README.md [Samir Hussain]
+* Update Debian changelog [Samir Hussain]
+
+v1.3.13 (December 3, 2018)
+* Specify email address for reporting security vulnerabilities [Samir Hussain]
+* Fix compile warning with USE_KERNEL in xl2tpd.c [Samir Hussain]
+* Applying patch that reduces compile warnings and fixes warnings from gcc and clang. [Gareth Ansell]
+* Fix compiler warnings in network.c [Gareth Ansell]
+* Add a make command for packaging's prep work [Samir Hussain]
+* Add Makefile directive for getting version [Samir Hussain]
+* Add a preproc for Watchguard firewall (Github issue #136) [daniel1111]
+* Convert from ISO-8859 to UTF-8 [Simon Deziel]
+* Update README to provide latest info on xl2tpd + Linux kernel 4.15+ [Samir Hussain]
+* Use dh_auto_build in order to allow cross compiles [Helmut Grohne]
+
+v1.3.12 (May 18, 2018)
+* TOS value to copy to the tunnel header (Yurkovskyy)
+* Fix for ENODEV (No such device) error with Linux kernel 4.15 (Douglas Kosovic)
+* Update xl2tpd.init (bogdik)
+* fix version number and upload (Samuel Thibault)
+* import wheezy changes  (Samuel Thibault)
+
+v1.3.11 (March 7, 2018)
+* Build packages for Xenial by default (Simon Deziel)
+* Bump d/compat to 9 (Simon Deziel)
+* Drop d/repack.sh script and refresh d/watch (Simon Deziel)
+* Refresh d/control by partly sync'ing from Debian (Simon Deziel)
+* Use HTTPS URL in d/copyright (Simon Deziel)
+
+v1.3.10.1 (November 16, 2017)
+* Have max retries as a configuration [Samir Hussain]
+* Add more into to "select timeout" debug message [Samir Hussain]
+
 v1.3.10 (August 2, 2017)
 * Update STRLEN in file.h to 100 (from 80) [Samir Hussain]
 * xl2tpd-control: fix xl2tpd hanged up in "fopen" [wendy2001011]
@@ -194,7 +325,7 @@ v1.2.7
 v1.2.6
 * Partial fix for compiling on OpenBSD [synapse]
 * add missing setting of logopen=1 in init_log() [Shingo Yamawaki]
-* xltpd could deadlock on syslog() call in signal handler [Bart Trojanowski] 
+* xltpd could deadlock on syslog() call in signal handler [Bart Trojanowski]
 * fix fedora/centos spec file [Paul]
 
 v1.2.5
@@ -210,14 +341,14 @@ v1.2.4
 * Workaround for broken kernels that send duplicate pids to waitpid()
   See: https://bugzilla.redhat.com/show_bug.cgi?id=486945 [Mika / Tuomo]
 * Fix pppd option from legacy -detach to nodetach [Tuomo]
-  
+
 v1.2.3
 * Fixes for prefix/destdir and spec files [paul/tuomo]
 * Use pcap not pcap-devel on suse, rhel and centos [paul/tuomo/shingo]
 * Added pfc to contrib. pfc is a tool to compile active-filters
   for pppd, which can be used for dial-on-demand filters [paul/roberto]
 * Bug tracker bugs fixed
-  # 998: xl2tpd-1.2.2 Makefile sets wrong path for mandir 
+  # 998: xl2tpd-1.2.2 Makefile sets wrong path for mandir
 
 v1.2.2
 * PPP CHAP authentication using plugin passwordfd.so failed [tgohad@mvista.com]
@@ -240,7 +371,7 @@ v1.2.0
 
 v1.1.12
 * Fix for dropped packets and wrong disconnects. [Ray Overland / Tuomo]
-* Included debian directory from Roberto C. Sanchez <roberto@connexer.com> 
+* Included debian directory from Roberto C. Sanchez <roberto@connexer.com>
 
 v1.1.11
 * Support for passwordfd when using xl2tpd as client.
@@ -318,7 +449,7 @@ v1.01
 v1.00
 * First version managed by Xelerance, called xl2tpd.
 * If we aren't deamonized, then log to stderr.
-* added install: and DESTDIR support 
+* added install: and DESTDIR support
 
 0.70
 --

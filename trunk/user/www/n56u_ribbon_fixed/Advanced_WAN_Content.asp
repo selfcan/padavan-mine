@@ -313,7 +313,7 @@ function change_wan_type(wan_type, flag){
 	showhide_div("row_dhcp_toggle", is_pppoe||is_pptp||is_l2tp);
 	showhide_div("row_dns_toggle", !is_static);
 	showhide_div("tbl_vpn_control", is_pppoe||is_pptp||is_l2tp);
-	showhide_div("row_auth_type", is_static||is_dhcp);
+	showhide_div("row_auth_type", is_static||is_dhcp||is_pptp);
 
 	if(is_pppoe||is_pptp||is_l2tp){
 		$("dhcp_sect_desc").innerHTML = "<#WAN_MAN_desc#>";
@@ -578,8 +578,9 @@ function AuthSelection(auth){
 	var wan_type = document.form.wan_proto.value;
 
 	if(wan_type == "pppoe" || wan_type == "pptp" || wan_type == "l2tp"){
-		showhide_div("row_auth_user", 0);
-		showhide_div("row_auth_pass", 0);
+		var show = (wan_type == "pptp") ? 1 : 0;
+		showhide_div("row_auth_user", show);
+		showhide_div("row_auth_pass", show);
 		showhide_div("row_auth_host", 0);
 		return 0;
 	}
@@ -725,9 +726,9 @@ function simplyMAC(fullMAC){
                                             <th><#WAN_SFE#></a></th>
                                             <td>
                                                 <select name="sfe_enable" class="input">
-                                                    <option value="0" <% nvram_match_x("", "sfe_enable", "0", "selected"); %>>Disable</option>
-                                                    <option value="1" <% nvram_match_x("", "sfe_enable", "1", "selected"); %>>Enable for IPv4/IPv6</option>
-                                                    <option value="2" <% nvram_match_x("", "sfe_enable", "2", "selected"); %>>Enable for IPv4/IPv6 and WiFi</option>
+                                                    <option value="1" <% nvram_match_x("", "sfe_enable", "1", "selected"); %>>Offload TCP/UDP for LAN</option>
+                                                    <option value="2" <% nvram_match_x("", "sfe_enable", "2", "selected"); %>>Offload TCP/UDP for LAN/WLAN</option>
+                                                    <option value="0" <% nvram_match_x("", "sfe_enable", "0", "selected"); %>>Disable (Slow)</option>
                                                 </select>
                                             </td>
                                         </tr>
@@ -1013,7 +1014,7 @@ function simplyMAC(fullMAC){
                                             </td>
                                         </tr>
                                         <tr id="row_vci">
-                                            <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this,7,19);"><#PPPConnection_x_HostNameForISP_itemvci#></a></th>
+                                            <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this,7,19);">Vendor Class Identifier:</a></th>
                                             <td>
                                                 <input type="text" name="wan_vci" class="input" maxlength="128" size="32" value="<% nvram_get_x("","wan_vci"); %>" onkeypress="return is_string(this,event);"/>
                                             </td>

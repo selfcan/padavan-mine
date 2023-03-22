@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/sysinfo.h>
 
 #include "rc.h"
 
@@ -233,350 +234,159 @@ restart_sshd(void)
 }
 #endif
 
-#if defined(APP_SCUT)
-int is_scutclient_run(void)
+#if defined(SUPPORT_ZRAM)
+int
+get_zram_disksize(void)
 {
-	if(pids("bin_scutclient"))
-		return 1;
-	return 0;
+	int result = 0;
+	struct sysinfo info;
+	int mode = nvram_get_int("zram_enable");
+	if (mode > 0 && mode < 3 && sysinfo(&info) == 0) {
+		result = (int)(info.totalram >> (3 - mode));
+	}
+	return result;
 }
-void stop_scutclient(void)
+
+void
+stop_zram(void)
 {
-	eval("/usr/bin/scutclient.sh","stop");
-}
-
-void start_scutclient(void)
-{
-	int scutclient_mode = nvram_get_int("scutclient_enable");
-	if (scutclient_mode == 1)
-		eval("/usr/bin/scutclient.sh","start");
-}
-
-void restart_scutclient(void)
-{
-	stop_scutclient();
-	start_scutclient();
-}
-
-#endif
-
-
-#if defined(APP_MENTOHUST)
-
-int is_mentohust_run(void)
-{
-	if(pids("bin_mentohust"))
-		return 1;
-	return 0;
-}
-void stop_mentohust(void)
-{
-	eval("/usr/bin/mentohust.sh","stop");
-}
-
-void start_mentohust(void)
-{
-	int mode = nvram_get_int("mentohust_enable");
-	if (mode == 1)
-		eval("/usr/bin/mentohust.sh","start");
-}
-
-void restart_mentohust(void)
-{
-	stop_mentohust();
-	start_mentohust();
-}
-
-#endif
-
-#if defined(APP_TTYD)
-void stop_ttyd(void){
-	eval("/usr/bin/ttyd.sh","stop");
-}
-
-void start_ttyd(void){
-	int ttyd_mode = nvram_get_int("ttyd_enable");
-	if ( ttyd_mode == 1)
-		eval("/usr/bin/ttyd.sh","start");
-}
-
-void restart_ttyd(void){
-	stop_ttyd();
-	start_ttyd();
-}
-#endif
-
-#if defined(APP_SHADOWSOCKS)
-void stop_ss(void){
-	eval("/usr/bin/shadowsocks.sh","stop");
-}
-
-void start_ss(void){
-	int ss_enable = nvram_get_int("ss_enable");
-	if ( ss_enable == 1)
-		eval("/usr/bin/shadowsocks.sh","start");
-}
-
-void restart_ss(void){
-	stop_ss();
-	start_ss();
-}
-
-void stop_ss_tunnel(void){
-	eval("/usr/bin/ss-tunnel.sh","stop");
-}
-
-void start_ss_tunnel(void){
-	int ss_tunnel_mode = nvram_get_int("ss-tunnel_enable");
-	if ( ss_tunnel_mode == 1)
-		eval("/usr/bin/ss-tunnel.sh","start");
-}
-
-void restart_ss_tunnel(void){
-	stop_ss_tunnel();
-	start_ss_tunnel();
-}
-
-void update_chnroute(void){
-	eval("/bin/sh","-c","/usr/bin/update_chnroute.sh force &");
-}
-
-void update_gfwlist(void){
-	eval("/bin/sh","-c","/usr/bin/update_gfwlist.sh force &");
-}
-
-void update_dlink(void){
-	eval("/bin/sh","-c","/usr/bin/update_dlink.sh start &");
-}
-
-void reset_dlink(void){
-	eval("/bin/sh","-c","/usr/bin/update_dlink.sh reset &");
-}
-
-#endif
-
-#if defined(APP_VLMCSD)
-void stop_vlmcsd(void){
-	eval("/usr/bin/vlmcsd.sh","stop");
-}
-
-void start_vlmcsd(void){
-	int vlmcsd_mode = nvram_get_int("vlmcsd_enable");
-	if ( vlmcsd_mode == 1)
-		eval("/usr/bin/vlmcsd.sh","start");
-}
-
-void restart_vlmcsd(void){
-	stop_vlmcsd();
-	start_vlmcsd();
-}
-#endif
-
-#if defined(APP_DNSFORWARDER)
-void stop_dnsforwarder(void){
-	eval("/usr/bin/dns-forwarder.sh","stop");
-}
-
-void start_dnsforwarder(void){
-	int dnsforwarder_mode = nvram_get_int("dns_forwarder_enable");
-	if (dnsforwarder_mode == 1)
-		eval("usr/bin/dns-forwarder.sh","start");
-}
-
-void restart_dnsforwarder(void){
-	stop_dnsforwarder();
-	start_dnsforwarder();
-}
-#endif
-
-#if defined(APP_NAPT66)
-void start_napt66(void){
-	int napt66_mode = nvram_get_int("napt66_enable");
-	char *wan6_ifname = nvram_get("wan0_ifname_t");
-	if (napt66_mode == 1) {
-		if (wan6_ifname) {
-			char napt66_para[32];
-			logmessage("napt66","wan6 ifname: %s",wan6_ifname);
-			snprintf(napt66_para,sizeof(napt66_para),"wan_if=%s",wan6_ifname);
-			module_smart_load("napt66", napt66_para);
-		} else {
-			logmessage("napt66","Invalid wan6 ifname!");
-		}
+	if (is_module_loaded("zram")) {
+		doSystem("swapoff /dev/zram0");
+		module_smart_unload("zram", 1);
 	}
 }
-#endif
 
-#if defined(APP_KOOLPROXY)
-void stop_koolproxy(void){
-	eval("/usr/bin/koolproxy.sh","stop");
+void
+start_zram(void)
+{
+	int disksize = get_zram_disksize();
+	if (disksize) {
+		module_smart_load("zram", "num_devices=1");
+		sleep(1);
+		fput_int("/sys/block/zram0/disksize", disksize);
+		doSystem("mkswap /dev/zram0");
+		doSystem("swapon -p 32767 -d /dev/zram0");
+	}
 }
 
-void start_koolproxy(void){
-	int koolproxy_mode = nvram_get_int("koolproxy_enable");
-	if ( koolproxy_mode == 1)
-		eval("/usr/bin/koolproxy.sh","start");
-}
-
-void restart_koolproxy(void){
-	stop_koolproxy();
-	start_koolproxy();
-}
-
-void update_kp(void){
-	eval("/usr/bin/koolproxy.sh","updatekp");
-}
-#endif
-
-#if defined(APP_ADGUARDHOME)
-void stop_adguardhome(void){
-	eval("/usr/bin/adguardhome.sh","stop");
-}
-
-void start_adguardhome(void){
-	int adg_mode = nvram_get_int("adg_enable");
-	if ( adg_mode == 1)
-		eval("/usr/bin/adguardhome.sh","start");
-}
-
-void restart_adguardhome(void){
-	stop_adguardhome();
-	start_adguardhome();
-}
-
-#endif
-
-#if defined(APP_WYY)
-void stop_wyy(void){
-	eval("/usr/bin/unblockmusic.sh","stop");
-}
-
-void start_wyy(void){
-	int wyy_enable = nvram_get_int("wyy_enable");
-	if ( wyy_enable == 1)
-		eval("/usr/bin/unblockmusic.sh","start");
-}
-
-void restart_wyy(void){
-	stop_wyy();
-	start_wyy();
+void
+restart_zram(void)
+{
+	stop_zram();
+	start_zram();
 }
 #endif
 
-#if defined(APP_ZEROTIER)
-void stop_zerotier(void){
-	eval("/usr/bin/zerotier.sh","stop");
+#if defined(APP_TOR)
+int
+is_tor_run(void)
+{
+	if (check_if_file_exist("/usr/sbin/tor"))
+	{
+		if (pids("tor"))
+			return 1;
+	}
+	return 0;
 }
 
-void start_zerotier(void){
-	int zerotier_enable = nvram_get_int("zerotier_enable");
-	if ( zerotier_enable == 1)
-		eval("/usr/bin/zerotier.sh","start");
+void
+stop_tor(void)
+{
+	eval("/usr/bin/tor.sh", "stop");
 }
 
-void restart_zerotier(void){
-	stop_zerotier();
-	start_zerotier();
-}
-#endif
+void
+start_tor(void)
+{
+	int tor_mode = nvram_get_int("tor_enable");
 
-#if defined(APP_ADBYBY)
-void stop_adbyby(void){
-	eval("/usr/bin/adbyby.sh","stop");
+	if (tor_mode == 1)
+		eval("/usr/bin/tor.sh", "start");
 }
 
-void start_adbyby(void){
-	int adbyby_mode = nvram_get_int("adbyby_enable");
-	if ( adbyby_mode == 1)
-		eval("/usr/bin/adbyby.sh","start");
-}
-
-void restart_adbyby(void){
-	stop_adbyby();
-	start_adbyby();
-}
-
-void update_adb(void){
-	eval("/usr/bin/adbyby.sh","updateadb");
+void
+restart_tor(void)
+{
+	stop_tor();
+	start_tor();
 }
 #endif
-
-
-#if defined(APP_SMARTDNS)
-void stop_smartdns(void){
-	eval("/usr/bin/smartdns.sh","stop");
+#if defined(APP_PRIVOXY)
+int
+is_privoxy_run(void)
+{
+	if (check_if_file_exist("/usr/sbin/privoxy"))
+	{
+		if (pids("privoxy"))
+			return 1;
+	}
+	return 0;
 }
 
-void start_smartdns(void){
-	int smartdns_mode = nvram_get_int("sdns_enable");
-	if ( smartdns_mode == 1)
-		eval("/usr/bin/smartdns.sh","start");
+void
+stop_privoxy(void)
+{
+	eval("/usr/bin/privoxy.sh", "stop");
 }
 
-void restart_smartdns(void){
-	stop_smartdns();
-	start_smartdns();
-}
-#endif
+void
+start_privoxy(void)
+{
+	int privoxy_mode = nvram_get_int("privoxy_enable");
 
-#if defined(APP_FRP)
-void stop_frp(void){
-	eval("/usr/bin/frp.sh","stop");
+	if (privoxy_mode == 1)
+		eval("/usr/bin/privoxy.sh", "start");
 }
 
-void start_frp(void){
-	eval("/usr/bin/frp.sh","start");
-}
-
-void restart_frp(void){
-	stop_frp();
-	start_frp();
-}
-#endif
-
-#if defined(APP_NPC)
-void stop_npc(void){
-	eval("/usr/bin/npc.sh","stop");
-}
-
-void start_npc(void){
-	eval("/usr/bin/npc.sh","start");
-}
-
-void restart_npc(void){
-	stop_npc();
-	start_npc();
+void
+restart_privoxy(void)
+{
+	stop_privoxy();
+	start_privoxy();
 }
 #endif
-
-#if defined(APP_CADDY)
-void stop_caddy(void){
-	eval("/usr/bin/caddy.sh","stop");
+#if defined(APP_DNSCRYPT)
+int
+is_dnscrypt_run(void)
+{
+	if (check_if_file_exist("/usr/sbin/dnscrypt-proxy"))
+	{
+		if (pids("dnscrypt-proxy"))
+			return 1;
+	}
+	return 0;
 }
 
-void start_caddy(void){
-	eval("/usr/bin/caddy.sh","start");
+void
+stop_dnscrypt(void)
+{
+	eval("/usr/bin/dnscrypt-proxy.sh", "stop");
 }
 
-void restart_caddy(void){
-	stop_caddy();
-	start_caddy();
-}
-#endif
-
-#if defined(APP_ALIDDNS)
-void stop_aliddns(void){
-	eval("/usr/bin/aliddns.sh","stop");
+void
+start_dnscrypt(void)
+{
+	if (nvram_get_int("dnscrypt_enable") == 1)
+		eval("/usr/bin/dnscrypt-proxy.sh", "start");
 }
 
-void start_aliddns(void){
-	int aliddns_mode = nvram_get_int("aliddns_enable");
-	if ( aliddns_mode == 1)
-		eval("/usr/bin/aliddns.sh","start");
-}
+void
+restart_dnscrypt(void)
+{
+	int is_run_before = is_dnscrypt_run();
+	int is_run_after;
 
-void restart_aliddns(void){
-    stop_aliddns();
-	start_aliddns();
+	stop_dnscrypt();
+	start_dnscrypt();
+
+	is_run_after = is_dnscrypt_run();
+
+	/* add-remove iptables rules for DNS forwarding when switching-on-off DNSCrypt-Proxy control in WebUI */
+	if ((is_run_after != is_run_before) && nvram_match("dnscrypt_force_dns", "1"))
+		restart_firewall();
+
+	/* add-remove needed dnsmasq params when dnscrypt-proxy is enabled-disabled */
+	restart_dhcpd();
 }
 #endif
 
@@ -755,12 +565,24 @@ restart_watchdog_cpu(void)
 int
 start_services_once(int is_ap_mode)
 {
+#if defined(SUPPORT_ZRAM)
+	start_zram();
+#endif
 	start_8021x_wl();
 	start_8021x_rt();
 	start_httpd(0);
 	start_telnetd();
 #if defined(APP_SSHD)
 	start_sshd();
+#endif
+#if defined(APP_TOR)
+	start_tor();
+#endif
+#if defined(APP_PRIVOXY)
+	start_privoxy();
+#endif
+#if defined(APP_DNSCRYPT)
+	start_dnscrypt();
 #endif
 	start_vpn_server();
 	start_watchdog();
@@ -781,53 +603,14 @@ start_services_once(int is_ap_mode)
 #endif
 	}
 
-doSystem("/usr/sbin/skipd -d /etc/storage/db");
-
-#if defined(APP_SCUT)
-	start_scutclient();
-#endif
-#if defined(APP_DNSFORWARDER)
-	start_dnsforwarder();
-#endif
-//#if defined(APP_SHADOWSOCKS)
-//	start_ss();
-//	start_ss_tunnel();
-//#endif
-#if defined(APP_TTYD)
-	start_ttyd();
-#endif
-//#if defined(APP_FRP)
-//	start_frp();
-//#endif
-//#if defined(APP_NPC)
-//	start_npc();
-//#endif
-#if defined(APP_VLMCSD)
-	start_vlmcsd();
-#endif
-//#if defined(APP_KOOLPROXY)
-//	start_koolproxy();
-//#endif
-//#if defined(APP_ADBYBY)
-//	start_adbyby();
-//#endif
-//#if defined(APP_ALIDDNS)
-//	start_aliddns();
-//#endif
-//#if defined(APP_SMARTDNS)
-//	start_smartdns();
-//#endif
-//#if defined(APP_CADDY)
-//	start_caddy();
-//#endif
 	start_lltd();
 	start_watchdog_cpu();
 	start_crond();
 	start_networkmap(1);
 	start_rstats();
-#if defined(APP_MENTOHUST)
-	start_mentohust();
-#endif
+	system("/usr/bin/iappd.sh restart");
+	system("modprobe xt_TPROXY");
+	system("/usr/bin/iappd.sh test");
 	return 0;
 }
 
@@ -851,48 +634,14 @@ stop_services(int stopall)
 	stop_u2ec();
 #endif
 #endif
-#if defined(APP_SCUT)
-	stop_scutclient();
+#if defined(APP_TOR)
+	stop_tor();
 #endif
-#if defined(APP_MENTOHUST)
-	stop_mentohust();
+#if defined(APP_PRIVOXY)
+	stop_privoxy();
 #endif
-#if defined(APP_TTYD)
-	stop_ttyd();
-#endif
-#if defined(APP_FRP)
-	stop_frp();
-#endif
-#if defined(APP_NPC)
-	stop_npc();
-#endif
-#if defined(APP_KOOLPROXY)
-	stop_koolproxy();
-#endif
-#if defined(APP_ADGUARDHOME)
-	stop_adguardhome();
-#endif
-#if defined(APP_SHADOWSOCKS)
-	stop_ss();
-	stop_ss_tunnel();
-#endif
-#if defined(APP_ADBYBY)
-	stop_adbyby();
-#endif
-#if defined(APP_WYY)
-	stop_wyy();
-#endif
-#if defined(APP_ZEROTIER)
-	stop_zerotier();
-#endif
-#if defined(APP_ALIDDNS)
-	stop_aliddns();
-#endif
-#if defined(APP_SMARTDNS)
-	stop_smartdns();
-#endif
-#if defined(APP_CADDY)
-	stop_caddy();
+#if defined(APP_DNSCRYPT)
+	stop_dnscrypt();
 #endif
 	stop_networkmap();
 	stop_lltd();
@@ -901,6 +650,9 @@ stop_services(int stopall)
 	stop_infosvr();
 	stop_crond();
 	stop_igmpproxy(NULL);
+#if defined(SUPPORT_ZRAM)
+	stop_zram();
+#endif
 }
 
 void

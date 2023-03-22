@@ -52,7 +52,8 @@ CH_FREQ_MAP CH_HZ_ID_MAP[]=
 			{132, 5660},
 			{136, 5680},
 			{140, 5700},
-						
+			{144, 5720},
+
 			/* Japan MMAC */
 			{34, 5170},
 			{38, 5190},
@@ -357,6 +358,29 @@ CH_DESC Country_Region22_ChDesc_5GHZ[] =
 	{}
 };
 
+/* special for Belarus */
+CH_DESC Country_Region34_ChDesc_5GHZ[] = {
+	{36, 8, CHANNEL_DEFAULT_PROP},
+	{132, 4, CHANNEL_DEFAULT_PROP},
+	{}
+};
+
+/* special for Ukraine */
+CH_DESC Country_Region35_ChDesc_5GHZ[] = {
+	{36, 8, CHANNEL_DEFAULT_PROP},
+	{100, 11, CHANNEL_DEFAULT_PROP},
+	{149, 5, CHANNEL_DEFAULT_PROP},
+	{}
+};
+
+/* special for Russia */
+CH_DESC Country_Region36_ChDesc_5GHZ[] = {
+	{36, 8, CHANNEL_DEFAULT_PROP},
+	{132, 4, CHANNEL_DEFAULT_PROP},
+	{149, 5, CHANNEL_DEFAULT_PROP},
+	{}
+};
+
 COUNTRY_REGION_CH_DESC Country_Region_ChDesc_5GHZ[] =
 {
 	{REGION_0_A_BAND, Country_Region0_ChDesc_5GHZ},
@@ -382,6 +406,9 @@ COUNTRY_REGION_CH_DESC Country_Region_ChDesc_5GHZ[] =
 	{REGION_20_A_BAND, Country_Region20_ChDesc_5GHZ},
 	{REGION_21_A_BAND, Country_Region21_ChDesc_5GHZ},
 	{REGION_22_A_BAND, Country_Region22_ChDesc_5GHZ},
+	{REGION_34_A_BAND, Country_Region34_ChDesc_5GHZ},
+	{REGION_35_A_BAND, Country_Region35_ChDesc_5GHZ},
+	{REGION_36_A_BAND, Country_Region36_ChDesc_5GHZ},
 	{}
 };
 
@@ -546,8 +573,8 @@ CH_DESP Country_BY_ChDesp[] =
 {
 	{ 1,   13, 20, BOTH, FALSE},	/*2402~2482MHz, Ch 1~13,   Max BW: 40 */
 	{ 36,   4, 20, BOTH, FALSE},	/*5170~5250MHz, Ch 36~48, Max BW: 40 */
-	{ 52,   4, 20, BOTH, TRUE}, 	/*5250~5330MHz, Ch 52~64, Max BW: 40 */
-	{ 100, 11, 27, BOTH, TRUE}, 	/*5490~5710MHz, Ch 100~140, Max BW: 40 */
+	{ 52,   4, 20, BOTH, FALSE},	/*5250~5330MHz, Ch 52~64, Max BW: 40 */
+	{ 132,  4, 20, BOTH, FALSE},	/*5650~5730MHz, Ch 132~144, Max BW: 40 */
 	{ 0},               	    	/* end*/
 };
 /*Belgium*/	
@@ -1230,7 +1257,8 @@ CH_DESP Country_RU_ChDesp[] =
 	{ 1,   13, 20, BOTH, FALSE},	/*2402~2482MHz, Ch 1~13,   Max BW: 40 */
 	{ 36,   4, 20, BOTH, FALSE},	/*5170~5250MHz, Ch 36~48, Max BW: 40 */
 	{ 52,   4, 20, BOTH, FALSE}, 	/*5250~5330MHz, Ch 52~64, Max BW: 40 */
-	{ 149,  5, 30, BOTH, FALSE},	/*5735~5835MHz, Ch 149~165, Max BW: 40 */
+	{ 132,  4, 20, BOTH, FALSE},	/*5650~5730MHz, Ch 132~144, Max BW: 40 */
+	{ 149,  5, 20, BOTH, FALSE},	/*5735~5835MHz, Ch 149~165, Max BW: 40 */
 	{ 0},               	    	/* end*/
 };
 /*Saint Barth'elemy*/		
@@ -1378,6 +1406,10 @@ CH_DESP Country_TR_ChDesp[] =
 CH_DESP Country_UA_ChDesp[] =
 {
 	{ 1,   13, 20, BOTH, FALSE},	/*2402~2482MHz, Ch 1~13,   Max BW: 40 */
+	{ 36,   4, 20, BOTH, FALSE},	/*5170~5250MHz, Ch 36~48, Max BW: 40 */
+	{ 52,   4, 20, BOTH, FALSE},	/*5250~5330MHz, Ch 52~64, Max BW: 40 */
+	{ 100, 11, 20, BOTH, FALSE},	/*5490~5710MHz, Ch 100~140, Max BW: 40 */
+	{ 149,  5, 20, BOTH, FALSE},	/*5735~5835MHz, Ch 149~165, Max BW: 40 */
 	{ 0},               	    	/* end*/
 };
 /*United Arab Emirates*/		
@@ -1495,7 +1527,7 @@ CH_REGION ChRegion[] =
 	{"BH", CE, Country_BH_ChDesp, TRUE}, /* Bahrain */
 	{"BD", CE, Country_BD_ChDesp, TRUE}, /* Bangladesh */
 	{"BB", CE, Country_BB_ChDesp, TRUE}, /* Barbados */
-	{"BY", CE, Country_BY_ChDesp, TRUE}, /* Belarus */
+	{"BY", CE, Country_BY_ChDesp, FALSE}, /* Belarus */
 	{"BE", CE, Country_BE_ChDesp, TRUE}, /* Belgium */
 	{"BZ", CE, Country_BZ_ChDesp, TRUE}, /* Belize */
 	{"BO", CE, Country_BO_ChDesp, TRUE}, /* Bolivia */
@@ -1591,7 +1623,7 @@ CH_REGION ChRegion[] =
 	{"TT", CE, Country_TT_ChDesp, TRUE}, /* Trinidad and Tobago */			
 	{"TN", CE, Country_TN_ChDesp, TRUE}, /* Tunisia */				
 	{"TR", CE, Country_TR_ChDesp, TRUE}, /* Turkey */					
-	{"UA", CE, Country_UA_ChDesp, TRUE}, /* Ukraine */					
+	{"UA", CE, Country_UA_ChDesp, FALSE}, /* Ukraine */					
 	{"AE", CE, Country_AE_ChDesp, TRUE}, /* United Arab Emirates */					
 	{"GB", CE, Country_GB_ChDesp, TRUE}, /* United Kingdom */			
 	{"US", FCC,Country_US_ChDesp, FALSE}, /* United States */			
@@ -1861,7 +1893,7 @@ COUNTRY_PROP CountryProp[]=
 	{"BH", CE, TRUE }, /* Bahrain */
 	{"BD", CE, TRUE }, /* Bangladesh */
 	{"BB", CE, TRUE }, /* Barbados */
-	{"BY", CE, TRUE }, /* Belarus */
+	{"BY", CE, FALSE }, /* Belarus */
 	{"BE", CE, TRUE }, /* Belgium */
 	{"BZ", CE, TRUE }, /* Belize */
 	{"BO", CE, TRUE }, /* Bolivia */
@@ -1957,7 +1989,7 @@ COUNTRY_PROP CountryProp[]=
 	{"TT", CE, TRUE }, /* Trinidad and Tobago */			
 	{"TN", CE, TRUE }, /* Tunisia */				
 	{"TR", CE, TRUE }, /* Turkey */					
-	{"UA", CE, TRUE }, /* Ukraine */					
+	{"UA", CE, FALSE }, /* Ukraine */					
 	{"AE", CE, TRUE }, /* United Arab Emirates */					
 	{"GB", CE, TRUE }, /* United Kingdom */			
 	{"US", FCC, FALSE}, /* United States */			

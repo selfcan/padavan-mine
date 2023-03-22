@@ -413,7 +413,12 @@ static int inet_peer_gc(struct inet_peer_base *base,
 		p = rcu_deref_locked(**stackptr, base);
 		if (atomic_read(&p->refcnt) == 0) {
 			smp_rmb();
-			delta = (__u32)jiffies - p->dtime;
+
+			/* The ACCESS_ONCE() pairs with the ACCESS_ONCE()
+			 * in inet_putpeer()
+			 */
+			delta = (__u32)jiffies - ACCESS_ONCE(p->dtime);
+
 			if (delta >= ttl &&
 			    atomic_cmpxchg(&p->refcnt, 0, -1) == 0) {
 				p->gc_next = gchead;
@@ -477,6 +482,7 @@ relookup:
 		p->tcp_ts_stamp = 0;
 		p->metrics[RTAX_LOCK-1] = INETPEER_METRICS_NEW;
 		p->rate_tokens = 0;
+		p->n_redirects = 0;
 		/* 60*HZ is arbitrary, but chosen enough high so that the first
 		 * calculation of tokens is at its maximum.
 		 */
@@ -498,7 +504,10 @@ EXPORT_SYMBOL_GPL(inet_getpeer);
 
 void inet_putpeer(struct inet_peer *p)
 {
-	p->dtime = (__u32)jiffies;
+	/* The ACCESS_ONCE() pairs with itself (we run lockless)
+	 * and the ACCESS_ONCE() in inet_peer_gc()
+	 */
+	ACCESS_ONCE(p->dtime) = (__u32)jiffies;
 	smp_mb__before_atomic_dec();
 	atomic_dec(&p->refcnt);
 }

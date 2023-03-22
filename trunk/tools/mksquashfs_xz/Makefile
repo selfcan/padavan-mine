@@ -1,5 +1,5 @@
-SRC_NAME1=squashfs-4.3
-SRC_NAME2=xz-5.2.4
+SRC_NAME1=squashfs-4.4
+SRC_NAME2=xz-5.2.5
 
 all: config_xz build_xz build_squashfs
 
@@ -24,7 +24,7 @@ configure_xz:
 	)
 
 build_xz:
-	make -C $(SRC_NAME2)
+	make -j$(HOST_NCPU) -C $(SRC_NAME2)
 
 build_squashfs:
 	make -j$(HOST_NCPU) -C $(SRC_NAME1) XZUTILSDIR=$(shell pwd)/$(SRC_NAME2) ; \
@@ -37,4 +37,6 @@ clean:
 	fi
 	make -C $(SRC_NAME1) clean
 	rm -f config_xz_done
+	rm -f mksquashfs
 	rm -f mksquashfs unsquashfs
+

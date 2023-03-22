@@ -1,7 +1,10 @@
 SRC_NAME=src
 
+CFLAGS += -fvisibility=hidden
+CXXFLAGS += -fvisibility=hidden -fvisibility-inlines-hidden
+
 all:
-	make -C $(SRC_NAME) embedded
+	make -j$(HOST_NCPU) -C $(SRC_NAME) embedded
 
 clean:
 	make -C $(SRC_NAME) clean

@@ -40,11 +40,27 @@ typedef unsigned long long _u64;
 #include "ipsecmast.h"
 #include <net/route.h>
 
-#define CONTROL_PIPE "/var/run/xl2tpd-control"
+#define CONTROL_PIPE "/var/run/l2tp-control"
 #define CONTROL_PIPE_MESSAGE_SIZE 1024
+#define UNUSED(x) (void)(x)
+
+/* Control pip request types */
+#define CONTROL_PIPE_REQ_LAC_REMOVE 'r'
+#define CONTROL_PIPE_REQ_LAC_ADD_MODIFY 'a'
+#define CONTROL_PIPE_REQ_LAC_STATUS 's'
+#define CONTROL_PIPE_REQ_LAC_DISCONNECT 'd'
+#define CONTROL_PIPE_REQ_LAC_HANGUP 'h'
+#define CONTROL_PIPE_REQ_LAC_OUTGOING_CALL 'o'
+#define CONTROL_PIPE_REQ_LAC_CONNECT 'c'
+#define CONTROL_PIPE_REQ_TUNNEL 't'
+
+#define CONTROL_PIPE_REQ_LNS_ADD_MODIFY 'z' /* Create or modify an existing LNS */
+#define CONTROL_PIPE_REQ_LNS_STATUS 'y'     /* Get status of LNS */
+#define CONTROL_PIPE_REQ_AVAILABLE 'x'     /* Get status of LNS */
+#define CONTROL_PIPE_REQ_LNS_REMOVE 'w'     /* Get status of LNS */
 
 #define BINARY "xl2tpd"
-#define SERVER_VERSION "xl2tpd-1.3.10"
+#define SERVER_VERSION "xl2tpd-1.3.18"
 #define VENDOR_NAME "xelerance.com"
 #ifndef PPPD
 #define PPPD		"/usr/sbin/pppd"
@@ -68,7 +84,7 @@ struct control_hdr
 #define CLBIT(ver) (ver & 0x4000)       /* Length bit present.  Must be 1
                                            for control messages */
 
-#define CZBITS(ver) (ver &0x37F8)       /* Reserved bits:  We must drop 
+#define CZBITS(ver) (ver &0x37F8)       /* Reserved bits:  We must drop
                                            anything with these there */
 
 #define CFBIT(ver) (ver & 0x0800)       /* Presence of Ns and Nr fields
@@ -96,13 +112,17 @@ struct payload_hdr
 #define PAYLOAD_BUF 10          /* Provide 10 expansion bytes
                                    so we can "decompress" the
                                    payloads and simplify coding */
+#if 1
+#define DEFAULT_MAX_RETRIES 5   /* Recommended value from spec */
+#else
+#define DEFAULT_MAX_RETRIES 95   /* give us more time to debug */
+#endif
 
-#define DEFAULT_MAX_RETRIES  5   /* Recommended value from spec */
-
-#define DEFAULT_RWS_SIZE	8    /* Default max outstanding control packets in queue */
-#define DEFAULT_TX_BPS		100000000        /* For outgoing calls, report this speed */
-#define DEFAULT_RX_BPS		100000000
-#define DEFAULT_MAX_BPS		100000000        /* jz: outgoing calls max bps */
+#define DEFAULT_RWS_SIZE   4    /* Default max outstanding
+                                   control packets in queue */
+#define DEFAULT_TX_BPS		10000000        /* For outgoing calls, report this speed */
+#define DEFAULT_RX_BPS		10000000
+#define DEFAULT_MAX_BPS		10000000        /* jz: outgoing calls max bps */
 #define DEFAULT_MIN_BPS		10000   /* jz: outgoing calls min bps */
 #define PAYLOAD_FUDGE		2       /* How many packets we're willing to drop */
 #define MIN_PAYLOAD_HDR_LEN 6
@@ -160,11 +180,11 @@ struct tunnel
     int rxspeed;		/* Receive bps */
     int txspeed;		/* Transmit bps */
     int udp_fd;			/* UDP fd */
-    int pppox_fd;			/* PPPOX tunnel fd */
+    int pppox_fd;		/* PPPOX tunnel fd */
     struct call *self;
     struct lns *lns;            /* LNS that owns us */
     struct lac *lac;            /* LAC that owns us */
-    struct in_pktinfo my_addr;	/* Address of my endpoint */
+    struct in_pktinfo my_addr;  /* Address of my endpoint */
     struct rtentry rt;		/* Route added to destination */
     char hostname[MAXSTRLEN];   /* Remote hostname */
     char vendor[MAXSTRLEN];     /* Vendor of remote product */
@@ -222,7 +242,7 @@ extern int switch_io;           /* jz */
 extern int control_fd;
 #ifdef USE_KERNEL
 extern int kernel_support;
-extern int connect_pppol2tp(struct tunnel *t);
+extern int connect_pppol2tp (struct tunnel *t);
 #endif
 extern int start_pppd (struct call *c, struct ppp_opts *);
 extern void magic_lac_dial (void *);

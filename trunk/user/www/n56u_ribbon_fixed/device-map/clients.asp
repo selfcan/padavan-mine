@@ -157,6 +157,20 @@ function add_client_row(table, atIndex, client, blocked, j){
 	var macCell = row.insertCell(3);
 	var rssiCell = row.insertCell(4);
 	var blockCell = row.insertCell(5);
+	
+	var arpon = <% nvram_get_x("","dhcp_static_arp"); %>;
+	var mdhcp = <% nvram_get_x("","dhcp_static_x"); %>;
+	if (arpon == 1 && mdhcp == 1){
+	   var j;
+	   for(j = 0; j < m_dhcp.length; ++j){
+	      if (client[2] == m_dhcp[j][0]){
+	         client[0] = m_dhcp[j][2];
+	         if (client[1] == m_dhcp[j][1]){
+	            client[1] = m_dhcp[j][1];
+	         }
+	      }
+	   }    
+	}
 
 	typeCell.style.textAlign = "center";
 	typeCell.innerHTML = "<img title='"+ DEVICE_TYPE[client[5]]+"' src='/bootstrap/img/wl_device/" + client[5] +".gif'>";
@@ -375,8 +389,8 @@ function networkmap_update(s){
         <tr>
             <th width="8%"><a href="javascript:sort(0)"><#Type#></a></th>
             <th><a href="javascript:sort(1)"><#Computer_Name#></a></th>
-            <th width="20%"><a href="javascript:sort(2)">IP</a></th>
-            <th width="24%"><a href="javascript:sort(3)">MAC</a></th>
+            <th width="20%"><a href="javascript:sort(2)"><#IP_Address#></a></th>
+            <th width="24%"><a href="javascript:sort(3)"><#MAC_Address#></a></th>
             <th width="8%" id="col_rssi"><a href="javascript:sort(4)">RSSI</a></th>
             <th width="0%" id="col_block"></th>
         </tr>
@@ -394,8 +408,8 @@ function networkmap_update(s){
         <tr>
             <th width="8%"><#Type#></th>
             <th><#Computer_Name#></th>
-            <th width="20%">IP</th>
-            <th width="24%">MAC</th>
+            <th width="20%"><#IP_Address#></th>
+            <th width="24%"><#MAC_Address#></th>
             <th width="8%" id="col_unrssi">RSSI</th>
             <th width="0%" id="col_unblock"></th>
         </tr>

@@ -29,7 +29,6 @@ $j(document).ready(function() {
 	init_itoggle('lan_dhcpd_x');
 	init_itoggle('dhcp_static_x', change_dhcp_static_enabled);
 	init_itoggle('dhcp_static_arp');
-	init_itoggle('dhcp_filter_aaa');
 });
 
 </script>
@@ -62,7 +61,13 @@ function initial(){
 		showhide_div('row_dhcpd_ap', 1);
 		showhide_div('row_domain', 0);
 		showhide_div('row_dservers', 0);
+		showhide_div('row_dhcpconf', 0);
 		showhide_div('row_hosts', 0);
+	}
+	if(!found_support_wpad()){
+		showhide_div('row_wpad', 0);
+	}else{
+		if(get_ap_mode()) showhide_div('row_wpad', 0);
 	}
 
 	if((inet_network(document.form.lan_ipaddr.value)>=inet_network(document.form.dhcp_start.value))&&
@@ -500,27 +505,6 @@ function changeBgColor(obj, num){
                                         <tr>
                                             <th colspan="2" style="background-color: #E3E3E3;"><#t2Advanced#></th>
                                         </tr>
-										<tr>
-                                            <th width="50%"><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this,5,13);">禁止解析IPv6 DNS记录</a></th>
-                                            <td>
-                                                <div class="main_itoggle">
-                                                    <div id="dhcp_filter_aaa_on_of">
-                                                        <input type="checkbox" id="dhcp_filter_aaa_fake" <% nvram_match_x("", "dhcp_filter_aaa", "1", "value=1 checked"); %><% nvram_match_x("", "dhcp_filter_aaa", "0", "value=0"); %>>
-                                                    </div>
-                                                </div>
-
-                                                <div style="position: absolute; margin-left: -10000px;">
-                                                    <input type="radio" value="1" name="dhcp_filter_aaa" id="dhcp_filter_aaa_1" <% nvram_match_x("", "dhcp_filter_aaa", "1", "checked"); %> /><#checkbox_Yes#>
-                                                    <input type="radio" value="0" name="dhcp_filter_aaa" id="dhcp_filter_aaa_0" <% nvram_match_x("", "dhcp_filter_aaa", "0", "checked"); %> /><#checkbox_No#>
-                                                </div>
-                                            </td>
-                                        </tr>
-										<tr>
-                                            <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this,5,14);">客户端缓存的最小DNS TTL</a></th>
-                                            <td>
-                                                <input type="text" maxlength="15" class="input" size="15" name="dhcp_min_ttl" value="<% nvram_get_x("", "dhcp_min_ttl"); %>" />
-                                            </td>
-                                        </tr>
                                         <tr>
                                             <th width="50%"><#DHCP_Verbose#></th>
                                             <td>
@@ -542,8 +526,16 @@ function changeBgColor(obj, num){
                                         </tr>
                                         <tr id="row_dservers">
                                             <td colspan="2">
-                                                <a href="javascript:spoiler_toggle('spoiler_dservers')"><span><#CustomConf#> "dhcp.conf"</span></a>
+                                                <a href="javascript:spoiler_toggle('spoiler_dservers')"><span><#CustomConf#> "dnsmasq.servers"</span></a>
                                                 <div id="spoiler_dservers" style="display:none;">
+                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="16384" class="span12" name="dnsmasq.dnsmasq.servers" style="font-family:'Courier New'; font-size:12px;"><% nvram_dump("dnsmasq.dnsmasq.servers",""); %></textarea>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr id="row_dhcpconf">
+                                            <td colspan="2">
+                                                <a href="javascript:spoiler_toggle('spoiler_dhcpconf')"><span><#CustomConf#> "dhcp.conf"</span></a>
+                                                <div id="spoiler_dhcpconf" style="display:none;">
                                                     <textarea rows="16" wrap="off" spellcheck="false" maxlength="16384" class="span12" name="dnsmasq.dhcp.conf" style="font-family:'Courier New'; font-size:12px;"><% nvram_dump("dnsmasq.dhcp.conf",""); %></textarea>
                                                 </div>
                                             </td>
@@ -553,6 +545,14 @@ function changeBgColor(obj, num){
                                                 <a href="javascript:spoiler_toggle('spoiler_hosts')"><span><#CustomConf#> "hosts"</span></a>
                                                 <div id="spoiler_hosts" style="display:none;">
                                                     <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" name="dnsmasq.hosts" style="font-family:'Courier New'; font-size:12px;"><% nvram_dump("dnsmasq.hosts",""); %></textarea>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr id="row_wpad">
+                                            <td colspan="2" style="padding-bottom: 0px;">
+                                                <a href="javascript:spoiler_toggle('spoiler_wpad')"><span><#LANHostConfig_WPAD#> "wpad.dat"</span></a>
+                                                <div id="spoiler_wpad" style="display:none;">
+                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="65536" class="span12" name="scripts.wpad.dat" style="font-family:'Courier New'; font-size:12px;"><% nvram_dump("scripts.wpad.dat",""); %></textarea>
                                                 </div>
                                             </td>
                                         </tr>

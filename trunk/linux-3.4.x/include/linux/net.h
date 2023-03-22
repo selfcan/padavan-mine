@@ -306,9 +306,6 @@ do {								\
 #define net_dbg_ratelimited(fmt, ...)				\
 	net_ratelimited_function(pr_debug, fmt, ##__VA_ARGS__)
 
-#define net_random()		random32()
-#define net_srandom(seed)	srandom32((__force u32)seed)
-
 bool __net_get_random_once(void *buf, int nbytes, bool *done,
 			   struct static_key *done_key);
 
@@ -352,6 +349,9 @@ extern int kernel_sendpage(struct socket *sock, struct page *page, int offset,
 extern int kernel_sock_ioctl(struct socket *sock, int cmd, unsigned long arg);
 extern int kernel_sock_shutdown(struct socket *sock,
 				enum sock_shutdown_cmd how);
+
+/* Routine returns the IP overhead imposed by a (caller-protected) socket. */
+u32 kernel_sock_ip_overhead(struct sock *sk);
 
 #define MODULE_ALIAS_NETPROTO(proto) \
 	MODULE_ALIAS("net-pf-" __stringify(proto))

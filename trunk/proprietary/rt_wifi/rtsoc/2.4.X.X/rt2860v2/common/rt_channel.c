@@ -52,7 +52,8 @@ CH_FREQ_MAP CH_HZ_ID_MAP[]=
 			{132, 5660},
 			{136, 5680},
 			{140, 5700},
-						
+			{144, 5720},
+
 			/* Japan MMAC */
 			{34, 5170},
 			{38, 5190},
@@ -728,8 +729,11 @@ CH_REGION ChRegion[] =
 			"RU",
 			CE,
 			{
-				{ 1,   14,  20, BOTH, FALSE},	// 2.4 G, ch 1~14
-				{ 149,  4,  20, IDOR, FALSE},	// 5G, ch 149~161
+				{ 1,   14, 20, BOTH, FALSE},	// 2.4 G, ch 1~14
+				{ 36,   4, 20, BOTH, FALSE},	/*5170~5250MHz, Ch 36~48, Max BW: 40 */
+				{ 52,   4, 20, BOTH, FALSE}, 	/*5250~5330MHz, Ch 52~64, Max BW: 40 */
+				{ 132,  4, 20, BOTH, FALSE},	/*5650~5730MHz, Ch 132~144, Max BW: 40 */
+				{ 149,  5, 20, BOTH, FALSE},	/*5735~5835MHz, Ch 149~165, Max BW: 40 */
 				{ 0},							// end
 			}
 		},
@@ -888,7 +892,11 @@ CH_REGION ChRegion[] =
 			"UA",
 			CE,
 			{
-				{ 1,   13,  20, BOTH, FALSE},	// 2.4 G, ch 1~11
+				{ 1,   13, 20, BOTH, FALSE},	// 2.4 G, ch 1~13
+				{ 36,   4, 20, BOTH, FALSE},	/*5170~5250MHz, Ch 36~48, Max BW: 40 */
+				{ 52,   4, 20, BOTH, FALSE}, 	/*5250~5330MHz, Ch 52~64, Max BW: 40 */
+				{ 100, 11, 20, BOTH, FALSE},	/*5490~5710MHz, Ch 100~140, Max BW: 40 */
+				{ 149,  5, 20, BOTH, FALSE},	/*5735~5835MHz, Ch 149~165, Max BW: 40 */
 				{ 0},							// end
 			}
 		},

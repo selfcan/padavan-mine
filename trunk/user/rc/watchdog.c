@@ -566,10 +566,9 @@ svc_timecheck(void)
 			}
 		}
 	}
-
 	return 0;
 }
-	
+
 static void
 update_svc_status_wifi2()
 {

@@ -261,7 +261,7 @@ fill_dnsmasq_servers(void)
 	}
 
 	/* fill from user dnsmasq.servers */
-	//load_user_config(fp, storage_dir, "dnsmasq.servers", NULL);
+	load_user_config(fp, storage_dir, "dnsmasq.servers", NULL);
 
 	fclose(fp);
 
@@ -293,7 +293,7 @@ int
 start_dns_dhcpd(int is_ap_mode)
 {
 	FILE *fp;
-	int i_verbose, i_dhcp_enable, is_dhcp_used, is_dns_used, filter_aaaa, min_ttl;
+	int i_verbose, i_dhcp_enable, is_dhcp_used, is_dns_used;
 	char dhcp_start[32], dhcp_end[32], dns_all[64], dnsv6[40];
 	char *ipaddr, *netmask, *gw, *dns1, *dns2, *dns3, *wins, *domain, *dns6;
 	const char *storage_dir = "/etc/storage/dnsmasq";
@@ -339,7 +339,13 @@ start_dns_dhcpd(int is_ap_mode)
 		/* listen DNS queries from clients of VPN server */
 		fprintf(fp, "listen-address=%s\n", ipaddr);
 	}
-
+#if defined(APP_DNSCRYPT)
+	if (!is_ap_mode && nvram_match("dnscrypt_enable", "1")) {
+		/* don't use resolv-file to resovle DNS queries if dnscrypt-proxy is enabled */
+		fprintf(fp, "no-resolv\n"
+			    "server=%s#%d\n", nvram_safe_get("dnscrypt_ipaddr"), nvram_get_int("dnscrypt_port"));
+	}
+#endif
 	if (!is_ap_mode) {
 		is_dns_used = 1;
 		fprintf(fp, "min-port=%d\n", 4096);
@@ -500,7 +506,6 @@ start_dns_dhcpd(int is_ap_mode)
 
 	fprintf(fp, "conf-file=%s/dnsmasq.conf\n", storage_dir);
 	fclose(fp);
-    doSystem("/usr/bin/dnsmasq.sh");
 	if (is_dns_used)
 		fill_dnsmasq_servers();
 
@@ -1174,4 +1179,3 @@ manual_ddns_hostname_check(void)
 {
 	nvram_set_temp("ddns_return_code", "inadyn_unsupport");
 }
-

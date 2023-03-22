@@ -22,9 +22,7 @@ helpcontent[5] = new Array("",
 				"<#LANHostConfig_x_LDNSServer1_itemdesc#>",
 				"<#LANHostConfig_x_WINSServer_itemdesc#>",
 				"<#LANHostConfig_ManualDHCPEnable_itemdesc#>",
-				"<#LANHostConfig_x_LDNSServer6_itemdesc#>",
-				"过滤掉 IPv6(AAAA) ，只返回 IPv4 DNS 域名记录",
-				"修改发送到客户端的域名记录的 TTL 时间 (最大 864000, 0 表示不修改)");
+				"<#LANHostConfig_x_LDNSServer6_itemdesc#>");
 helpcontent[6] = new Array("",
 				"<#RHELP_desc4#>",
 				"<#RHELP_desc5#>",
@@ -89,7 +87,8 @@ helpcontent[11] = new Array("",
 				"<#LANHostConfig_x_ServerLogEnable_itemdesc#>",
 				"<#LANHostConfig_x_TimeZone_itemdesc#>",
 				"<#LANHostConfig_x_NTPServer_itemdesc#>",
-				"<#LANHostConfig_x_Password_itemdesc#>");
+				"<#LANHostConfig_x_Password_itemdesc#>",
+				"<#Adm_System_zram_itemdesc#>");
 //Log
 helpcontent[12] = new Array("",
 				"<#General_x_SystemUpTime_itemdesc#>",
@@ -176,6 +175,12 @@ helpcontent[24] = new Array("",
 				"<#LANHostConfig_x_DDNSHostNames_itemdesc#>",
 				"<#LANHostConfig_x_DDNSWildcard_itemdesc#>",
 				"<#LANHostConfig_x_DDNSStatus_itemdesc#>");
+
+// DNSCrypt
+helpcontent[25] = new Array("",
+				"<#Adm_Svc_dnscrypt_desc#>",
+				"<#Adm_Svc_dnscrypt_force_dns_desc#>",
+				"<#Adm_Svc_dnscrypt_options_desc#>");
 
 
 function openTooltip(obj, hint_array_id, hint_show_id)

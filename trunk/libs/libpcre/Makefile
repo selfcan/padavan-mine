@@ -1,7 +1,8 @@
-SRC_NAME=pcre-8.43
-SRC_URL=https://ftp.pcre.org/pub/pcre/pcre-8.43.zip
+SRC_NAME=pcre-8.45
+SRC_URL=https://downloads.sourceforge.net/project/pcre/pcre/8.45/pcre-8.45.zip
 
-all: download_test extract_test config_test
+#all: download_test extract_test config_test
+all: config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 download_test:
@@ -19,17 +20,16 @@ config_test:
 		echo "the same configuration"; \
 	else \
 		make configure && touch config_done; \
-	fi )
+	fi ) 
 
 configure:
 	( cd $(SRC_NAME) ; \
+	autoreconf ; \
 	./configure \
-		--prefix=$(STAGEDIR) \
-		--enable-utf8 \
-		--enable-unicode-properties \
-		--enable-pcre16 \
+		--prefix= \
+		--enable-static \
+		--disable-shared \
 		--disable-cpp \
-		--with-match-limit-recursion=16000 \
 		--host=$(HOST_TARGET) \
 		--build=$(HOST_BUILD) ; \
 	)
@@ -41,7 +41,6 @@ clean:
 	rm -f config_done
 
 install:
-	$(MAKE) -C $(SRC_NAME) install DESTDIR=""
-
+	$(MAKE) -C $(SRC_NAME) install DESTDIR=$(STAGEDIR)
+	
 romfs:
-	cp -fP $(DESTDIR)/lib/libpcre.so* $(ROMFSDIR)/lib

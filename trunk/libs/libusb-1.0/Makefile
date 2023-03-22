@@ -1,7 +1,8 @@
-SRC_NAME=libusb-1.0.23
-SRC_URL=https://github.com/libusb/libusb/releases/download/v1.0.23/libusb-1.0.23.tar.bz2
+SRC_NAME=libusb-1.0.26
+SRC_URL=https://github.com/libusb/libusb/releases/download/v1.0.26/$(SRC_NAME).tar.bz2
 
-all: download_test extract_test config_test
+#all: download_test extract_test config_test
+all: config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 download_test:
@@ -12,6 +13,7 @@ download_test:
 extract_test:
 	( if [ ! -d $(SRC_NAME) ]; then \
 		tar jxf $(SRC_NAME).tar.bz2; \
+		patch -d $(SRC_NAME) -p1 -i ../specifig.patch ; \
 	fi )
 
 config_test:
@@ -25,12 +27,10 @@ configure:
 	( cd $(SRC_NAME) ; \
 	ac_cv_lib_rt_clock_gettime=no \
 	./configure \
-		--prefix=$(STAGEDIR) \
+		--prefix= \
 		--disable-static \
 		--disable-log \
 		--disable-udev \
-		--disable-examples-build \
-		--disable-tests-build \
 		--host=$(HOST_TARGET) \
 		--build=$(HOST_BUILD) ; \
 	)
@@ -42,7 +42,7 @@ clean:
 	rm -f config_done
 
 install:
-	$(MAKE) -C $(SRC_NAME) install DESTDIR=""
+	$(MAKE) -C $(SRC_NAME) install DESTDIR=$(STAGEDIR)
 
 romfs:
 	cp -fP $(DESTDIR)/lib/libusb-1.0.so* $(ROMFSDIR)/lib

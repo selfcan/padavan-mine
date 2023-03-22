@@ -39,7 +39,6 @@ if [ -n "$NON_STRIPS_LIB" ]; then
 		${SSTRIP_TOOL} $NON_STRIPS_LIB
 	fi
 fi
-if [ "$CONFIG_WITHOUT_KERNEL" != "y" ]; then
 echo -----------------------------------STRIP MOD----------------------------------
 for i in $KERNEL_MODULES; do
 	echo $i;
@@ -47,7 +46,6 @@ for i in $KERNEL_MODULES; do
 done
 if [ -n "$KERNEL_MODULES" ]; then
 	${STRIPTOOL} -R .comment -R .note --strip-debug --strip-unneeded $KERNEL_MODULES
-fi
 fi
 sync
 echo ------------------------------LIB STRIP AND COPY OK---------------------------

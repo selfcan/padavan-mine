@@ -47,7 +47,7 @@
 #include <linux/kernel.h>
 #include <linux/pm_runtime.h>
 
-#if IS_ENABLED(CONFIG_RA_HW_NAT) && defined(CONFIG_RA_HW_NAT_PCI)
+#if defined(CONFIG_RA_HW_NAT_PCI) && (defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE))
 #include "../../../net/nat/hw_nat/ra_nat.h"
 extern int (*ra_sw_nat_hook_rx)(struct sk_buff *skb);
 extern int (*ra_sw_nat_hook_tx)(struct sk_buff *skb, int gmac_no);
@@ -343,13 +343,11 @@ void usbnet_skb_return (struct usbnet *dev, struct sk_buff *skb)
 	netif_dbg(dev, rx_status, dev->net, "< rx, len %zu, type 0x%x\n",
 		  skb->len + sizeof (struct ethhdr), skb->protocol);
 	memset (skb->cb, 0, sizeof (struct skb_data));
-
 #ifdef CONFIG_NETWORK_PHY_TIMESTAMPING
 	if (skb_defer_rx_timestamp(skb))
 		return;
 #endif
-
-#if IS_ENABLED(CONFIG_RA_HW_NAT) && defined(CONFIG_RA_HW_NAT_PCI)
+#if defined(CONFIG_RA_HW_NAT_PCI) && (defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE))
 	 /* ra_sw_nat_hook_rx return 1 --> continue
 	  * ra_sw_nat_hook_rx return 0 --> FWD & without netif_rx
 	  */
@@ -1320,7 +1318,7 @@ netdev_tx_t usbnet_start_xmit (struct sk_buff *skb,
 	if (skb)
 		skb_tx_timestamp(skb);
 
-#if IS_ENABLED(CONFIG_RA_HW_NAT) && defined(CONFIG_RA_HW_NAT_PCI)
+#if defined(CONFIG_RA_HW_NAT_PCI) && (defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE))
 	if ((ra_sw_nat_hook_tx != NULL) && !(info->flags & FLAG_MULTI_PACKET)) {
 		ra_sw_nat_hook_tx(skb, 0);
 	}
@@ -1552,7 +1550,7 @@ void usbnet_disconnect (struct usb_interface *intf)
 		   dev->driver_info->description);
 
 	net = dev->net;
-#if IS_ENABLED(CONFIG_RA_HW_NAT) && defined(CONFIG_RA_HW_NAT_PCI)
+#if defined(CONFIG_RA_HW_NAT_PCI) && (defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE))
 	if (ra_sw_nat_hook_rs != NULL) {
 		/* clear dstif table in hw_nat module */
 		ra_sw_nat_hook_rs(net, 0);
@@ -1664,11 +1662,7 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 	dev->interrupt_count = 0;
 
 	dev->net = net;
-#if !IS_ENABLED(CONFIG_RA_HW_NAT)
-	strcpy (net->name, "usb%d");
-#else
 	strcpy (net->name, "weth%d");
-#endif
 	memcpy (net->dev_addr, node_id, sizeof node_id);
 
 	/* rx and tx sides can use different message sizes;
@@ -1693,15 +1687,6 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 		if (status < 0)
 			goto out1;
 
-#if !IS_ENABLED(CONFIG_RA_HW_NAT)
-		// heuristic:  "usb%d" for links we know are two-host,
-		// else "eth%d" when there's reasonable doubt.  userspace
-		// can rename the link if it knows better.
-		if ((dev->driver_info->flags & FLAG_ETHER) != 0 &&
-		    ((dev->driver_info->flags & FLAG_POINTTOPOINT) == 0 ||
-		     (net->dev_addr [0] & 0x02) == 0))
-			strcpy (net->name, "eth%d");
-#endif
 		/* WLAN devices should always be named "wlan%d" */
 		if ((dev->driver_info->flags & FLAG_WLAN) != 0)
 			strcpy(net->name, "wlan%d");
@@ -1774,7 +1759,7 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 	if (dev->driver_info->flags & FLAG_LINK_INTR)
 		usbnet_link_change(dev, 0, 0);
 
-#if IS_ENABLED(CONFIG_RA_HW_NAT) && defined(CONFIG_RA_HW_NAT_PCI)
+#if defined(CONFIG_RA_HW_NAT_PCI) && (defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE))
 	if (ra_sw_nat_hook_rs != NULL) {
 		/* fill dstif table in hw_nat module */
 		ra_sw_nat_hook_rs(net, 1);

@@ -252,6 +252,7 @@ extern int sysctl_tcp_moderate_rcvbuf;
 extern int sysctl_tcp_tso_win_divisor;
 extern int sysctl_tcp_mtu_probing;
 extern int sysctl_tcp_base_mss;
+extern int sysctl_tcp_min_snd_mss;
 extern int sysctl_tcp_workaround_signed_windows;
 extern int sysctl_tcp_slow_start_after_idle;
 extern int sysctl_tcp_max_ssthresh;
@@ -302,19 +303,6 @@ static inline bool tcp_too_many_orphans(struct sock *sk, int shift)
 }
 
 extern bool tcp_check_oom(struct sock *sk, int shift);
-
-/* syncookies: remember time of last synqueue overflow */
-static inline void tcp_synq_overflow(struct sock *sk)
-{
-	tcp_sk(sk)->rx_opt.ts_recent_stamp = jiffies;
-}
-
-/* syncookies: no recent synqueue overflow on this listening socket? */
-static inline int tcp_synq_no_recent_overflow(const struct sock *sk)
-{
-	unsigned long last_overflow = tcp_sk(sk)->rx_opt.ts_recent_stamp;
-	return time_after(jiffies, last_overflow + TCP_TIMEOUT_FALLBACK);
-}
 
 extern struct proto tcp_prot;
 
@@ -437,6 +425,47 @@ extern int tcp_disconnect(struct sock *sk, int flags);
 extern struct sock *cookie_v4_check(struct sock *sk, struct sk_buff *skb, 
 				    struct ip_options *opt);
 #ifdef CONFIG_SYN_COOKIES
+#include <linux/ktime.h>
+
+/* Syncookies use a monotonic timer which increments every 60 seconds.
+ * This counter is used both as a hash input and partially encoded into
+ * the cookie value.  A cookie is only validated further if the delta
+ * between the current counter value and the encoded one is less than this,
+ * i.e. a sent cookie is valid only at most for 2*60 seconds (or less if
+ * the counter advances immediately after a cookie is generated).
+ */
+#define MAX_SYNCOOKIE_AGE	2
+#define TCP_SYNCOOKIE_PERIOD	(60 * HZ)
+#define TCP_SYNCOOKIE_VALID	(MAX_SYNCOOKIE_AGE * TCP_SYNCOOKIE_PERIOD)
+
+/* syncookies: remember time of last synqueue overflow
+ * But do not dirty this field too often (once per second is enough)
+ */
+static inline void tcp_synq_overflow(struct sock *sk)
+{
+	unsigned long last_overflow = ACCESS_ONCE(tcp_sk(sk)->rx_opt.ts_recent_stamp);
+	unsigned long now = jiffies;
+
+	if (!time_between32(now, last_overflow, last_overflow + HZ))
+		ACCESS_ONCE(tcp_sk(sk)->rx_opt.ts_recent_stamp) = now;
+}
+
+/* syncookies: no recent synqueue overflow on this listening socket? */
+static inline bool tcp_synq_no_recent_overflow(const struct sock *sk)
+{
+	unsigned long last_overflow = ACCESS_ONCE(tcp_sk(sk)->rx_opt.ts_recent_stamp);
+
+	return time_after(jiffies, last_overflow + TCP_SYNCOOKIE_VALID);
+}
+
+static inline u32 tcp_cookie_time(void)
+{
+	u64 val = get_jiffies_64();
+
+	do_div(val, TCP_SYNCOOKIE_PERIOD);
+	return val;
+}
+
 extern __u32 cookie_v4_init_sequence(struct sock *sk, struct sk_buff *skb, 
 				     __u16 *mss);
 #else
@@ -1310,6 +1339,23 @@ static inline void tcp_check_send_head(struct sock *sk, struct sk_buff *skb_unli
 static inline void tcp_init_send_head(struct sock *sk)
 {
 	sk->sk_send_head = NULL;
+}
+
+static inline struct sk_buff *tcp_rtx_queue_head(const struct sock *sk)
+{
+	struct sk_buff *skb = tcp_write_queue_head(sk);
+
+	if (skb == tcp_send_head(sk))
+		skb = NULL;
+
+	return skb;
+}
+
+static inline struct sk_buff *tcp_rtx_queue_tail(const struct sock *sk)
+{
+	struct sk_buff *skb = tcp_send_head(sk);
+
+	return skb ? tcp_write_queue_prev(sk, skb) : tcp_write_queue_tail(sk);
 }
 
 static inline void __tcp_add_write_queue_tail(struct sock *sk, struct sk_buff *skb)

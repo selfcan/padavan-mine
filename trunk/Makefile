@@ -16,15 +16,8 @@ VERSIONPKG = 1.1
 include .config
 include versions.inc
 
-ifeq ($(CONFIG_WITHOUT_KERNEL),y)
-all: tools unpack_trx libc_only libs_only user_only romfs image
-else
-ifeq ($(CONFIG_FIRMWARE_TYPE_ROOTFS_IN_RAM),y)
-all: tools modules libc_only libs_only user_only romfs linux image
-else
 all: tools linux libc_only libs_only user_only romfs image
-endif
-endif
+
 ############################################################################
 #
 # Get the core stuff worked out
@@ -34,45 +27,42 @@ ROOTDIR        = $(shell pwd)
 HOSTCC         = gcc
 ROMFSINST      = $(ROOTDIR)/tools/romfs-inst.sh
 TFTPDIR        = /tftpboot
-PATH          := $(PATH):$(ROOTDIR)/tools:$(ROOTDIR)/tools/go/go/bin
+PATH          := $(PATH):$(ROOTDIR)/tools
 
-VERSIONSTR     = $(CONFIG_VENDOR)/$(CONFIG_PRODUCT) Version $(VERSIONPKG)
+VERSIONSTR     = Mediatek/$(CONFIG_PRODUCT) Version $(VERSIONPKG)
 
-LINUXDIR       = $(CONFIG_LINUXDIR)
+BOARDDIR	= $(ROOTDIR)/configs/boards/$(CONFIG_VENDOR)/$(CONFIG_FIRMWARE_PRODUCT_ID)
+LINUXDIR       = linux-3.4.x
 LINUXINCDIR    = $(ROOTDIR)/$(LINUXDIR)/include
 IMAGEDIR       = $(ROOTDIR)/images
 ROMFSDIR       = $(ROOTDIR)/romfs
 STAGEDIR       = $(ROOTDIR)/stage
 SCRIPTSDIR     = $(ROOTDIR)/config/scripts
 LINUX_CONFIG   = $(ROOTDIR)/$(LINUXDIR)/.config
+ARCH_CONFIG    = $(ROOTDIR)/vendors/config/mips/config.arch
 PROJECT_CONFIG = $(ROOTDIR)/.config
 SSTRIP_TOOL    = $(if $(CONFIG_FIRMWARE_PERFORM_SSTRIP),$(ROOTDIR)/tools/sstrip/sstrip)
-UNSQSHFS_TOOL  = $(ROOTDIR)/tools/mksquashfs_xz/unsquashfs
-MERGE_DIR      = $(ROOTDIR)/merge
-MERGE_ROOTFS   = $(MERGE_DIR)/$(CONFIG_FIRMWARE_PRODUCT_ID)/rootfs
+
+PKG_CONFIG_SYSROOT_DIR = $(STAGEDIR)
+PKG_CONFIG_LIBDIR = $(PKG_CONFIG_SYSROOT_DIR)/lib
+PKG_CONFIG_PATH = $(PKG_CONFIG_LIBDIR)/pkgconfig
+
+FIRMWARE_MAXSIZE = $(shell awk '/"Firmware"/{ getline; getline; gsub(/,$$/,""); print strtonum($$2); }' $(BOARDDIR)/partitions.config)
 
 #NUM MAKE PROCESS = CPU NUMBER IN THE SYSTEM * CPU_OVERLOAD
 CPU_OVERLOAD	= 1
-HOST_NCPU	= $(shell if [ -f /proc/cpuinfo ]; then n=`grep -c processor /proc/cpuinfo`; if [ $$n -gt 1 ];then expr $$n \* ${CPU_OVERLOAD}; else echo $$n; fi; else echo 1; fi)
+HOST_NCPU	= $(shell if [ -f /proc/cpuinfo ]; then n=`getconf _NPROCESSORS_ONLN 2>/dev/null || echo 0`; if [ $$n -gt 1 ];then expr $$n \* ${CPU_OVERLOAD}; else echo $$n; fi; else echo 1; fi)
 
 CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 	  else if [ -x /bin/bash ]; then echo /bin/bash; \
 	  else echo sh; fi ; fi)
 
-ifneq ($(findstring linux-3.4,$(LINUXDIR)),)
 FIRMWARE_KERNEL_VER="3.4"
-CONFIG_CROSS_COMPILER_ROOT = $(CONFIG_TOOLCHAIN_DIR)/toolchain-3.4.x
+CONFIG_CROSS_COMPILER_ROOT = ${CONFIG_TOOLCHAIN_DIR}
 CONFIG_CROSS_COMPILER_PATH = $(CONFIG_CROSS_COMPILER_ROOT)/bin
 KERNEL_HEADERS_PATH = $(CONFIG_CROSS_COMPILER_ROOT)/mipsel-linux-uclibc/sysroot/usr/include
-endif
 
-ifeq (config.arch,$(wildcard config.arch))
-ifeq ($(filter %_default, $(MAKECMDGOALS)),)
-include config.arch
-ARCH_CONFIG = $(ROOTDIR)/config.arch
-export ARCH_CONFIG
-endif
-endif
+include $(ARCH_CONFIG)
 
 # May use a different compiler for the kernel
 KERNEL_CROSS_COMPILE ?= $(CROSS_COMPILE)
@@ -86,12 +76,12 @@ MAKEARCH_KERNEL = $(MAKE) ARCH=$(ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE)
 endif
 DIRS = libc libs user
 
-export VENDOR PRODUCT HOSTCC CONFIG_SHELL HOST_NCPU SSTRIP_TOOL
-export PROJECT_CONFIG LINUX_CONFIG ROOTDIR LINUXDIR ROMFSDIR SCRIPTSDIR
+export VENDOR PRODUCT HOSTCC CONFIG_SHELL HOST_NCPU SSTRIP_TOOL FIRMWARE_MAXSIZE
+export PROJECT_CONFIG LINUX_CONFIG ARCH_CONFIG ROOTDIR LINUXDIR ROMFSDIR SCRIPTSDIR
 export FIRMWARE_KERNEL_VER FIRMWARE_ROOTFS_VER FIRMWARE_BUILDS_VER FIRMWARE_BUILDS_REV
-export VERSIONPKG VERSIONSTR ROMFSINST PATH IMAGEDIR RELFILES TFTPDIR
+export VERSIONPKG VERSIONSTR ROMFSINST PATH IMAGEDIR RELFILES TFTPDIR BOARDDIR
 export KERNEL_HEADERS_PATH CONFIG_CROSS_COMPILER_ROOT CONFIG_CROSS_COMPILER_PATH
-export UNSQSHFS_TOOL CONFIG_WITHOUT_KERNEL
+export PKG_CONFIG_SYSROOT_DIR PKG_CONFIG_LIBDIR PKG_CONFIG_PATH
 
 ############################################################################
 
@@ -109,14 +99,11 @@ modules_install:
 		$(MAKEARCH_KERNEL) -C $(LINUXDIR) INSTALL_MOD_PATH=$(ROMFSDIR) DEPMOD=$(ROOTDIR)/tools/depmod.sh modules_install; \
 	fi
 
-.PHONY: modules_copy
-modules_copy:
-	[ -d $(ROMFSDIR)/lib/modules ] || mkdir -p $(ROMFSDIR)/lib/modules
-	cp -rfa $(MERGE_ROOTFS)/lib/modules $(ROMFSDIR)/lib
-
-.PHONY: bin_copy
-bin_copy:
-	for f in `cat $(MERGE_DIR)/file_list |grep -v "^#"`; do cp -fP $(MERGE_ROOTFS)/$$f $(ROMFSDIR)/$$f ; done
+modules_backports_install:
+	find $(ROMFSDIR)/lib/modules/*/updates | xargs -r rm -rf ; \
+	. $(LINUXDIR)/.config; if [ "$$CONFIG_MODULES" = "y" ]&&[ ! -z "$$CONFIG_USB_SUPPORT" ]&&([ "$$CONFIG_FIRMWARE_ENABLE_BACKPORTED" = "y" ]||[ "$$CONFIG_FIRMWARE_INCLUDE_BACKPORTED" = "y" ]); then \
+		$(MAKEARCH_KERNEL) -C $(ROOTDIR)/backports KLIB_BUILD=$(ROOTDIR)/$(LINUXDIR) KLIB=$(ROMFSDIR) modules_install; \
+	fi
 
 ############################################################################
 #
@@ -124,11 +111,7 @@ bin_copy:
 #
 
 .PHONY: romfs
-ifeq ($(CONFIG_WITHOUT_KERNEL),y)
-romfs: romfs.subdirs modules_copy bin_copy romfs.post
-else
-romfs: romfs.subdirs modules_install romfs.post
-endif
+romfs: romfs.subdirs modules_backports_install modules_install romfs.post
 
 .PHONY: romfs.subdirs
 romfs.subdirs:
@@ -138,6 +121,7 @@ romfs.subdirs:
 romfs.post:
 	-find $(ROMFSDIR)/. -name CVS | xargs -r rm -rf ; \
 	$(ROOTDIR)/tools/strip-romfs.sh ; \
+	$(MAKEARCH) -C vendors modules.archive ; \
 	$(MAKEARCH) -C vendors romfs.post
 
 .PHONY: image
@@ -169,20 +153,18 @@ dep:
 		echo "ERROR: you need to do a 'make config' first" ; \
 		exit 1 ; \
 	fi
-	$(MAKEARCH_KERNEL) -C $(LINUXDIR) modules_prepare
+	$(MAKEARCH_KERNEL) -C $(LINUXDIR) olddefconfig
+	$(MAKEARCH_KERNEL) -C $(LINUXDIR) prepare
 	$(MAKEARCH_KERNEL) -C $(LINUXDIR) dep
 
 .PHONY: tools
 tools:
 	make -C tools
 
-.PHONY: unpack_trx
-unpack_trx:
-	unpack-trx.sh
-
 clean:
 	make clean -C tools
 	for dir in  $(DIRS); do [ ! -d $$dir ] || $(MAKEARCH) -C $$dir clean ; done
+	$(MAKEARCH_KERNEL) -C $(ROOTDIR)/backports KLIB_BUILD=$(ROOTDIR)/$(LINUXDIR) clean
 	$(MAKEARCH_KERNEL) -C $(LINUXDIR) distclean
 	rm -rf $(STAGEDIR)
 	rm -rf $(ROMFSDIR)

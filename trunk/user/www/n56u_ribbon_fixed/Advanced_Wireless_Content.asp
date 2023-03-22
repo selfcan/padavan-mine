@@ -38,21 +38,16 @@ function initial(){
 	show_menu(5,2,1);
 	show_footer();
 
-	var o1 = document.form.wl_gmode;
-	var o2 = document.form.wl_mcs_mode;
-
-	if (!support_5g_11ax()){
-		o1.remove(0);
-	}
-
 	if (!support_5g_11ac()){
+		var o1 = document.form.wl_gmode;
 		o1.remove(0);
 		o1.remove(0);
 		o1.options[0].text = "a/n Mixed (*)";
 		insert_vht_bw(0);
-		o2.remove(1);
-		o2.remove(1);
-		o2.remove(1);
+		o1 = document.form.wl_mcs_mode;
+		o1.remove(1);
+		o1.remove(1);
+		o1.remove(1);
 	}
 
 	if (!support_5g_160mhz()){
@@ -200,9 +195,6 @@ function validForm(){
         }
     }
 
-	if(!validate_string_ssid(document.form.wl_ssid))
-		return false;
-
 	if(document.form.wl_ssid.value == "")
 		document.form.wl_ssid.value = "ASUS_5G";
 
@@ -288,7 +280,7 @@ function validate_wlphrase(s, v, obj){
     <input type="hidden" name="wl_radio_date_x" value="<% nvram_get_x("","wl_radio_date_x"); %>">
     <input type="hidden" name="wl_radio_time_x" value="<% nvram_get_x("","wl_radio_time_x"); %>">
     <input type="hidden" name="wl_radio_time2_x" value="<% nvram_get_x("","wl_radio_time2_x"); %>">
-    <input type="hidden" name="wl_ssid2" value="<% nvram_char_to_ascii("",  "wl_ssid"); %>">
+    <input type="hidden" name="wl_ssid2" value="<% nvram_get_x("",  "wl_ssid"); %>">
     <input type="hidden" name="wl_wpa_mode" value="<% nvram_get_x("","wl_wpa_mode"); %>">
     <input type="hidden" name="wl_wpa_psk_org" value="<% nvram_char_to_ascii("", "wl_wpa_psk"); %>">
     <input type="hidden" name="wl_key1_org" value="<% nvram_char_to_ascii("", "wl_key1"); %>">
@@ -382,7 +374,7 @@ function validate_wlphrase(s, v, obj){
                                         </tr>
                                         <tr>
                                             <th width="50%"><a class="help_tooltip" href="javascript: void(0)" onmouseover="openTooltip(this, 0, 1);"><#WLANConfig11b_SSID_itemname#></a></th>
-                                            <td><input type="text" maxlength="32" class="input" size="32" name="wl_ssid" value="" onkeypress="return is_string(this,event);"></td>
+                                            <td><input type="text" maxlength="32" class="input" size="32" name="wl_ssid" value=""></td>
                                         </tr>
                                         <tr>
                                             <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 0, 2);"><#WLANConfig11b_x_BlockBCSSID_itemname#></a></th>
@@ -402,9 +394,8 @@ function validate_wlphrase(s, v, obj){
                                             <th><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 0, 4);"><#WLANConfig11b_x_Mode11g_itemname#></a></th>
                                             <td>
                                                 <select name="wl_gmode" class="input" onChange="return change_common_wl(this, 'WLANConfig11a', 'wl_gmode')">
-                                                    <option value="5" <% nvram_match_x("","wl_gmode", "5","selected"); %>>a/n/ac/ax Mixed</option>
-                                                    <option value="4" <% nvram_match_x("","wl_gmode", "4","selected"); %>>a/n/ac Mixed (*)</option>
-                                                    <option value="3" <% nvram_match_x("","wl_gmode", "3","selected"); %>>n/ac Mixed</option>
+                                                    <option value="4" <% nvram_match_x("","wl_gmode", "4","selected"); %>>a/n/ac Mixed</option>
+                                                    <option value="3" <% nvram_match_x("","wl_gmode", "3","selected"); %>>n/ac Mixed (*)</option>
                                                     <option value="2" <% nvram_match_x("","wl_gmode", "2","selected"); %>>a/n Mixed</option>
                                                     <option value="1" <% nvram_match_x("","wl_gmode", "1","selected"); %>>n Only</option>
                                                     <option value="0" <% nvram_match_x("","wl_gmode", "0","selected"); %>>a Only</option>
@@ -418,7 +409,7 @@ function validate_wlphrase(s, v, obj){
                                                 <select name="wl_HT_BW" class="input" onChange="return change_common_wl(this, 'WLANConfig11a', 'wl_HT_BW')">
                                                     <option value="0" <% nvram_match_x("","wl_HT_BW", "0","selected"); %>>20 MHz</option>
                                                     <option value="1" <% nvram_match_x("","wl_HT_BW", "1","selected"); %>>20/40 MHz</option>
-                                                    <option value="2" <% nvram_match_x("","wl_HT_BW", "2","selected"); %>>20/40/80 MHz</option>
+                                                    <option value="2" <% nvram_match_x("","wl_HT_BW", "2","selected"); %>>20/40/80 MHz (*)</option>
                                                     <option value="3" <% nvram_match_x("","wl_HT_BW", "3","selected"); %>>20/40/80/160 MHz</option>
                                                 </select>
                                             </td>
@@ -575,6 +566,9 @@ function validate_wlphrase(s, v, obj){
                                                     <option value="CN" <% nvram_match_x("", "wl_country_code", "CN","selected"); %>>China (channels 36,40,44,48,149,153,157,161,165)</option>
                                                     <option value="KR" <% nvram_match_x("", "wl_country_code", "KR","selected"); %>>Korea (channels 149,153,157,161)</option>
                                                     <option value="JP" <% nvram_match_x("", "wl_country_code", "JP","selected"); %>>Japan (channels 36,40,44,48)</option>
+                                                    <option value="BY" <% nvram_match_x("", "wl_country_code", "BY","selected"); %>>Belarus (channels 36-64,132-144)</option>
+                                                    <option value="UA" <% nvram_match_x("", "wl_country_code", "UA","selected"); %>>Ukraine (channels 36-64,100-140,149-165)</option>
+                                                    <option value="RU" <% nvram_match_x("", "wl_country_code", "RU","selected"); %>>Russia (channels 36-64,132-144,149-165)</option>
                                                     <option value="DB" <% nvram_match_x("", "wl_country_code", "DB","selected"); %>>Debug (all channels)</option>
                                                 </select>
                                             </td>

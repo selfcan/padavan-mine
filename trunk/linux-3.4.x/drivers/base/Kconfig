@@ -2,7 +2,6 @@ menu "Generic Driver Options"
 
 config UEVENT_HELPER_PATH
 	string "path to uevent helper"
-	depends on HOTPLUG
 	default ""
 	help
 	  Path to uevent helper program forked by the kernel for
@@ -23,7 +22,6 @@ config UEVENT_HELPER_PATH
 
 config DEVTMPFS
 	bool "Maintain a devtmpfs filesystem to mount at /dev"
-	depends on HOTPLUG
 	help
 	  This creates a tmpfs/ramfs filesystem instance early at bootup.
 	  In this filesystem, the kernel driver core maintains device
@@ -144,6 +142,17 @@ config EXTRA_FIRMWARE_DIR
 	  The default is firmware/ in the kernel source tree, but by changing
 	  this option you can point it elsewhere, such as /lib/firmware/ or
 	  some other directory containing the firmware files.
+
+config FW_LOADER_USER_HELPER
+	bool "Fallback user-helper invocation for firmware loading"
+	depends on FW_LOADER
+	default y
+	help
+	  This option enables / disables the invocation of user-helper
+	  (e.g. udev) for loading firmware files as a fallback after the
+	  direct file loading in kernel fails.  The user-mode helper is
+	  no longer required unless you have a special firmware file that
+	  resides in a non-standard path.
 
 config DEBUG_DRIVER
 	bool "Driver Core verbose debug messages"

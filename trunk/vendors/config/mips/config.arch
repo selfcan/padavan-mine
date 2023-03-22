@@ -24,7 +24,7 @@ ifndef VERSIONPKG
 endif
 
 ifndef VERSIONSTR
-  VERSIONSTR = $(CONFIG_VENDOR)/$(CONFIG_PRODUCT) Version $(VERSIONPKG)
+  VERSIONSTR = Mediatek/$(CONFIG_PRODUCT) Version $(VERSIONPKG)
 endif
 
 ifndef RELFILES
@@ -42,8 +42,8 @@ endif
 #
 ############################################################################
 
-ENDIAN        ?= little
-HOST_TARGET   ?= mipsel-linux
+ENDIAN         = little
+HOST_TARGET    = mipsel-linux
 
 MACHINE        = mips
 ARCH           = mips
@@ -51,10 +51,10 @@ CROSS_COMPILE  = $(CONFIG_CROSS_COMPILER_PATH)/mipsel-linux-uclibc-
 CROSS          = $(CROSS_COMPILE)
 CONFIGURE_HOST = $(CONFIG_CROSS_COMPILER_PATH)/mipsel-linux-uclibc-
 
-CC             = $(CROSS_COMPILE)gcc $(CPUFLAGS)
-GCC            = $(CROSS_COMPILE)gcc $(CPUFLAGS)
-CXX            = $(CROSS_COMPILE)g++ $(CPUFLAGS)
-AS             = $(CROSS_COMPILE)as $(CPUFLAGS)
+CC             = $(CROSS_COMPILE)gcc
+GCC            = $(CROSS_COMPILE)gcc
+CXX            = $(CROSS_COMPILE)g++
+AS             = $(CROSS_COMPILE)as
 AR             = $(CROSS_COMPILE)ar
 LD             = $(CROSS_COMPILE)ld
 NM             = $(CROSS_COMPILE)nm
@@ -72,9 +72,29 @@ UCLINUX_BUILD_SET = 0
 
 # Pull in common definitions
 include $(ROOTDIR)/vendors/config/common/config.arch
+include $(LINUX_CONFIG)
 
 # clear flags
 CFLAGS :=
+
+############################ PLATFORM FLAGS #################################################
+CPUFLAGS = -mips32r2 -march=mips32r2
+ifeq ($(CONFIG_RALINK_MT7621),y)
+CPUFLAGS += -mtune=1004kc
+else ifneq (,$(filter y,$(CONFIG_RALINK_RT3052) $(CONFIG_RALINK_RT3352) $(CONFIG_RALINK_RT5350) $(CONFIG_RALINK_MT7620) $(CONFIG_RALINK_MT7628)))
+CPUFLAGS += -mtune=24kec
+else ifeq ($(CONFIG_RALINK_RT3883),y)
+CPUFLAGS += -mtune=74kc
+else
+CPUFLAGS += -mtune=mips32r2
+endif
+CC += $(CPUFLAGS)
+GCC += $(CPUFLAGS)
+CXX += $(CPUFLAGS)
+AS += $(CPUFLAGS)
+VENDOR_CFLAGS =
+UOPT = -Os
+LOPT = -Os
 
 ############################################################################
 #
@@ -87,7 +107,7 @@ ifdef UCLINUX_BUILD_LIB
   ifdef CONFIG_LIB_DEBUG
 	CFLAGS  :=  $(if $(LOPT),$(LOPT),-O1) -g
   else
-	CFLAGS  :=  $(if $(LOPT),$(LOPT),-O2) -fomit-frame-pointer
+	CFLAGS  :=  $(if $(LOPT),$(LOPT),-Os) -fomit-frame-pointer -fno-stack-protector -femit-struct-debug-baseonly -fno-var-tracking
   endif
 	CFLAGS  += -pipe
 	CFLAGS  += $(VENDOR_CFLAGS)
@@ -111,7 +131,7 @@ ifdef UCLINUX_BUILD_USER
   ifdef CONFIG_USER_DEBUG
 	CFLAGS  :=  $(if $(UOPT),$(UOPT),-O1) -g
   else
-	CFLAGS  :=  $(if $(UOPT),$(UOPT),-Os) -fomit-frame-pointer
+	CFLAGS  :=  $(if $(UOPT),$(UOPT),-Os) -fomit-frame-pointer -fno-stack-protector -femit-struct-debug-baseonly -fno-var-tracking
   endif
 	CFLAGS  += -pipe
 	CFLAGS  += $(VENDOR_CFLAGS)
@@ -149,19 +169,42 @@ endif
 CFLAGS += -Wall -Wno-trigraphs -Wno-strict-aliasing -Wno-format-security
 
 # disable unused variable warnings in gcc >= 4.6.x
-# CFLAGS += $(call check-gcc-nowarn,unused-but-set-variable,)
+CFLAGS += $(call check-gcc-nowarn,unused-but-set-variable,)
+
+# disable unused const warning
+CFLAGS += $(call check-gcc-nowarn,unused-const-variable,)
+
+# disable format truncation warning
+CFLAGS += $(call check-gcc-nowarn,format-truncation,)
+
+# disable format overflow warning
+CFLAGS += $(call check-gcc-nowarn,format-overflow,)
+
+# disable misleading indentation warning
+CFLAGS += $(call check-gcc-nowarn,misleading-indentation,)
 
 ############################################################################
 #
 # gcc version specific flags
 #
 ############################################################################
+# conserve stack if available
+CFLAGS += $(call check-gcc-flag,-fconserve-stack,)
 
-# fix ~10% performance regression in gcc >= 4.8.x
-CFLAGS += $(call check-gcc-flag,-fno-tree-slsr,)
+# disable invalid "can't wrap" optimizations for signed / pointers
+CFLAGS += $(call check-gcc-flag,-fno-strict-overflow,)
 
-# disable new loop optimization mode in gcc >= 4.8.x (fix loop regressions)
-CFLAGS += $(call check-gcc-flag,-fno-aggressive-loop-optimizations,)
+# fix gcc-4.9.x miscompilation of some code
+CFLAGS += $(call check-gcc-flag,-fno-var-tracking-assignments,)
+
+CFLAGS += $(call check-gcc-flag,-fno-merge-all-constants,)
+CFLAGS += $(call check-gcc-flag,-fmerge-constants,)
+
+# Make sure -fstack-check isn't enabled (like gentoo apparently did)
+CFLAGS += $(call check-gcc-flag,-fno-stack-check,)
+
+# more safe codegeneration
+CFLAGS += $(call check-gcc-flag,-fno-delete-null-pointer-checks,)
 
 ############################################################################
 #
@@ -169,8 +212,8 @@ CFLAGS += $(call check-gcc-flag,-fno-aggressive-loop-optimizations,)
 #
 ############################################################################
 
-CXXFLAGS := $(CFLAGS) $(INCCXX)
-CXXLIBS   = -Wl,-Bdynamic $(LIBC) $(LIBGCC) $(CRTN)
+CXXFLAGS := $(CFLAGS) $(INCCXX) -static-libstdc++
+CXXLIBS   = -Wl,-Bstatic $(LIBSTDCPP) -Wl,-Bdynamic $(LIBC) $(LIBGCC) $(CRTN)
 
 ############################################################################
 #
@@ -180,6 +223,4 @@ CXXLIBS   = -Wl,-Bdynamic $(LIBC) $(LIBGCC) $(CRTN)
 
 # disable pointer signed/unsigned warnings in gcc >= 4.x
 CFLAGS += -Wno-pointer-sign
-
-CFLAGS += -Wno-unused
 

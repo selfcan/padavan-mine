@@ -62,6 +62,7 @@ u32 surfboard_sysclk;
 u32 ralink_asic_rev_id;
 EXPORT_SYMBOL(ralink_asic_rev_id);
 
+#ifdef CONFIG_UBOOT_CMDLINE
 /* Environment variable */
 typedef struct {
 	char *name;
@@ -76,9 +77,11 @@ int *_prom_argv, *_prom_envp;
  * This macro take care of sign extension, if running in 64-bit mode.
  */
 #define prom_envp(index) ((char *)(((int *)(int)_prom_envp)[(index)]))
+#endif
 
 char *prom_getenv(char *envname)
 {
+#ifdef CONFIG_UBOOT_CMDLINE
 	/*
 	 * Return a pointer to the given environment variable.
 	 * In 64-bit mode: we're using 64-bit pointers, but all pointers
@@ -99,7 +102,7 @@ char *prom_getenv(char *envname)
 		}
 		index++;
 	}
-
+#endif
 	return NULL;
 }
 
@@ -551,9 +554,9 @@ static void prom_init_sysclk(void)
 	case 1: /* CPU PLL */
 		reg = (*(volatile u32 *)(RALINK_MEMCTRL_BASE + 0x648));
 #if defined(CONFIG_RALINK_MT7621_PLL900)
-		if ((reg & 0xff) != 0xc2) {
-			reg &= ~(0xff);
-			reg |=  (0xc2);
+		if ((reg & 0x7ff) != 0x362) {
+			reg &= ~(0x7ff);
+			reg |=  (0x362);
 			(*((volatile u32 *)(RALINK_MEMCTRL_BASE + 0x648))) = reg;
 			udelay(10);
 		}
@@ -617,6 +620,7 @@ static void prom_init_sysclk(void)
 	if ((reg>>17) & 0x1) {
 		ram_type = "DDR2";
 	}
+	surfboard_sysclk = mips_cpu_feq/3;
 #elif defined (CONFIG_RT5350_ASIC)
 	switch (clk_sel) {
 	case 0:
@@ -702,7 +706,7 @@ static void prom_init_sysclk(void)
 	vendor_name = "Ralink";
 #endif
 
-	printk("\n%s SoC: %s, RevID: %04X, RAM: %s, XTAL: %dMHz\n",
+	printk(KERN_INFO "%s SoC: %s, RevID: %04X, RAM: %s, XTAL: %dMHz\n",
 		vendor_name,
 		asic_id,
 		ralink_asic_rev_id & 0xffff,
@@ -710,7 +714,7 @@ static void prom_init_sysclk(void)
 		xtal
 	);
 
-	printk("CPU/OCP/SYS frequency: %d/%d/%d MHz\n",
+	printk(KERN_INFO "CPU/OCP/SYS frequency: %d/%d/%d MHz\n",
 		mips_cpu_feq / 1000 / 1000,
 		ocp_freq / 1000 / 1000,
 		surfboard_sysclk / 1000 / 1000
@@ -840,9 +844,11 @@ void __init prom_init(void)
 {
 	mips_machtype = MACH_RALINK_ROUTER;
 
+#ifdef CONFIG_UBOOT_CMDLINE
 	prom_argc = fw_arg0;
 	_prom_argv = (int*) fw_arg1;
 	_prom_envp = (int*) fw_arg2;
+#endif
 
 	set_io_port_base(KSEG1);
 

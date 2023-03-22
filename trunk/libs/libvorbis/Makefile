@@ -1,7 +1,8 @@
-SRC_NAME=libvorbis-1.3.6
-SRC_URL=http://downloads.xiph.org/releases/vorbis/$(SRC_NAME).tar.xz
+SRC_NAME=libvorbis-1.3.7
+SRC_URL=https://downloads.xiph.org/releases/vorbis/$(SRC_NAME).tar.xz
 
-all: download_test extract_test config_test
+#all: download_test extract_test config_test
+all: config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 download_test:
@@ -13,7 +14,6 @@ extract_test:
 	( if [ ! -d $(SRC_NAME) ]; then \
 		tar xJf $(SRC_NAME).tar.xz ; \
 		patch -d $(SRC_NAME) -p1 -i ../disable-doc-test.patch ; \
-		patch -d $(SRC_NAME) -p1 -i ../0001-CVE-2017-14160-fix-bounds-check-on-very-low-sample-rates.patch ; \
 	fi )
 
 config_test:
@@ -26,7 +26,7 @@ config_test:
 configure:
 	( cd $(SRC_NAME) ; \
 	./configure \
-		--prefix=$(STAGEDIR) \
+		--prefix= \
 		--enable-static \
 		--disable-shared \
 		--with-ogg-libraries=$(DESTDIR)/lib \
@@ -42,6 +42,6 @@ clean:
 	rm -f config_done
 
 install:
-	$(MAKE) -C $(SRC_NAME) install DESTDIR=""
+	$(MAKE) -C $(SRC_NAME) install DESTDIR=$(STAGEDIR)
 
 romfs:

@@ -156,6 +156,7 @@ static void option_instat_callback(struct urb *urb);
 #define NOVATELWIRELESS_PRODUCT_HSPA_HIGHSPEED6	0x7006
 #define NOVATELWIRELESS_PRODUCT_HSPA_HIGHSPEED7	0x7007
 #define NOVATELWIRELESS_PRODUCT_MC996D		0x7030
+#define NOVATELWIRELESS_PRODUCT_MC679		0x7031
 #define NOVATELWIRELESS_PRODUCT_MF3470		0x7041
 #define NOVATELWIRELESS_PRODUCT_MC547		0x7042
 #define NOVATELWIRELESS_PRODUCT_EVDO_EMBEDDED_FULLSPEED	0x8000
@@ -241,14 +242,18 @@ static void option_instat_callback(struct urb *urb);
 #define QUECTEL_PRODUCT_UC20			0x9003
 #define QUECTEL_PRODUCT_UC15			0x9090
 /* These Yuga products use Qualcomm's vendor ID */
-#define YUGA_PRODUCT_CLM920_NC5			0x9625
+#define YUGA_PRODUCT_CLM920_NC5                 0x9625
 
 #define QUECTEL_VENDOR_ID			0x2c7c
 /* These Quectel products use Quectel's vendor ID */
 #define QUECTEL_PRODUCT_EC21			0x0121
 #define QUECTEL_PRODUCT_EC25			0x0125
+#define QUECTEL_PRODUCT_EG95			0x0195
+#define QUECTEL_PRODUCT_BG96			0x0296
+#define QUECTEL_PRODUCT_EP06			0x0306
 
 #define SIERRA_VENDOR_ID			0x1199
+#define QUECTEL_PRODUCT_BG96			0x0296
 
 #define CMOTECH_VENDOR_ID			0x16d8
 #define CMOTECH_PRODUCT_6001			0x6001
@@ -535,6 +540,7 @@ static void option_instat_callback(struct urb *urb);
 
 /* TP-LINK Incorporated products */
 #define TPLINK_VENDOR_ID			0x2357
+#define TPLINK_PRODUCT_LTE			0x000D
 #define TPLINK_PRODUCT_MA180			0x0201
 
 /* Changhong products */
@@ -555,6 +561,11 @@ static void option_instat_callback(struct urb *urb);
 #define WETELECOM_PRODUCT_WMD200		0x6801
 #define WETELECOM_PRODUCT_6802			0x6802
 #define WETELECOM_PRODUCT_WMD300		0x6803
+
+/* Fibocom Wireless Qualcomm */
+#define FIBOCOM_VENDOR_ID			0x2cb7
+#define FIBOCOM_PRODUCT_NL678			0x0104
+#define FIBOCOM_PRODUCT_NL678_ECM		0x0105
 
 /* some devices interfaces need special handling due to a number of reasons */
 enum option_blacklist_reason {
@@ -708,7 +719,19 @@ static const struct option_blacklist_info cinterion_rmnet2_blacklist = {
 };
 
 static const struct option_blacklist_info yuga_clm920_nc5_blacklist = {
-	.reserved = BIT(1) | BIT(4),
+        .reserved = BIT(1) | BIT(4),
+};
+
+static const struct option_blacklist_info quectel_ep06_blacklist = {
+	.reserved = BIT(4) | BIT(5),
+};
+
+static const struct option_blacklist_info fibocom_nl678_blacklist = {
+	.reserved = BIT(4) | BIT(5),
+};
+
+static const struct option_blacklist_info fibocom_nl678_ecm_blacklist = {
+	.reserved = BIT(6),
 };
 
 static const struct usb_device_id option_ids[] = {
@@ -1151,6 +1174,7 @@ static const struct usb_device_id option_ids[] = {
 	{ USB_DEVICE(NOVATELWIRELESS_VENDOR_ID, NOVATELWIRELESS_PRODUCT_HSPA_HIGHSPEED6) },
 	{ USB_DEVICE(NOVATELWIRELESS_VENDOR_ID, NOVATELWIRELESS_PRODUCT_HSPA_HIGHSPEED7) },
 	{ USB_DEVICE(NOVATELWIRELESS_VENDOR_ID, NOVATELWIRELESS_PRODUCT_MC996D) },
+	{ USB_DEVICE(NOVATELWIRELESS_VENDOR_ID, NOVATELWIRELESS_PRODUCT_MC679) },
 	{ USB_DEVICE(NOVATELWIRELESS_VENDOR_ID, NOVATELWIRELESS_PRODUCT_MF3470) },
 	{ USB_DEVICE(NOVATELWIRELESS_VENDOR_ID, NOVATELWIRELESS_PRODUCT_MC547) },
 	{ USB_DEVICE(NOVATELWIRELESS_VENDOR_ID, NOVATELWIRELESS_PRODUCT_EVDO_EMBEDDED_HIGHSPEED) },
@@ -1212,6 +1236,8 @@ static const struct usb_device_id option_ids[] = {
 	{ USB_DEVICE(KYOCERA_VENDOR_ID, KYOCERA_PRODUCT_KPC650) },
 	{ USB_DEVICE(KYOCERA_VENDOR_ID, KYOCERA_PRODUCT_KPC680) },
 	{ USB_DEVICE(QUALCOMM_VENDOR_ID, 0x6000)}, /* ZTE AC8700 */
+	{ USB_DEVICE_AND_INTERFACE_INFO(QUALCOMM_VENDOR_ID, 0x6001, 0xff, 0xff, 0xff), /* 4G LTE usb-modem U901 */
+	  .driver_info = (kernel_ulong_t)&net_intf3_blacklist },
 	{ USB_DEVICE(QUALCOMM_VENDOR_ID, 0x6613)}, /* Onda H600/ZTE MF330 */
 	{ USB_DEVICE(QUALCOMM_VENDOR_ID, 0x0023)}, /* ONYX 3G device */
 	{ USB_DEVICE(QUALCOMM_VENDOR_ID, 0x9000)}, /* SIMCom SIM5218 */
@@ -1227,12 +1253,20 @@ static const struct usb_device_id option_ids[] = {
 	  .driver_info = (kernel_ulong_t)&net_intf4_blacklist },
 	{ USB_DEVICE(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_EC25),
 	  .driver_info = (kernel_ulong_t)&net_intf4_blacklist },
+	{ USB_DEVICE(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_EG95),
+	  .driver_info = (kernel_ulong_t)&net_intf4_blacklist },
+	{ USB_DEVICE(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_BG96),
+	  .driver_info = (kernel_ulong_t)&net_intf4_blacklist },
+	{ USB_DEVICE(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_EP06),
+	  .driver_info = (kernel_ulong_t)&quectel_ep06_blacklist },
 	{ USB_DEVICE_INTERFACE_CLASS(QUALCOMM_VENDOR_ID, 0x9201, 0xff),
 	  .driver_info = (kernel_ulong_t)&net_intf3_blacklist }, /* TS-UM6602 */
 	{ USB_DEVICE_INTERFACE_CLASS(SIERRA_VENDOR_ID, 0x68c0, 0xff),
 	  .driver_info = (kernel_ulong_t)&sierra_mc73xx_blacklist }, /* MC73xx */
 	{ USB_DEVICE_INTERFACE_CLASS(SIERRA_VENDOR_ID, 0x9041, 0xff),
 	  .driver_info = (kernel_ulong_t)&sierra_mc73xx_blacklist }, /* MC7305/MC7355 */
+	{ USB_DEVICE(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_BG96),
+	  .driver_info = (kernel_ulong_t)&net_intf4_blacklist },
 	{ USB_DEVICE(CMOTECH_VENDOR_ID, CMOTECH_PRODUCT_6001) },
 	{ USB_DEVICE(CMOTECH_VENDOR_ID, CMOTECH_PRODUCT_CMU_300) },
 	{ USB_DEVICE(CMOTECH_VENDOR_ID, CMOTECH_PRODUCT_6003),
@@ -2067,6 +2101,7 @@ static const struct usb_device_id option_ids[] = {
 	{ USB_DEVICE(CELLIENT_VENDOR_ID, CELLIENT_PRODUCT_MEN200) },
 	{ USB_DEVICE(PETATEL_VENDOR_ID, PETATEL_PRODUCT_NP10T_600A) },
 	{ USB_DEVICE(PETATEL_VENDOR_ID, PETATEL_PRODUCT_NP10T_600E) },
+	{ USB_DEVICE_AND_INTERFACE_INFO(TPLINK_VENDOR_ID, TPLINK_PRODUCT_LTE, 0xff, 0x00, 0x00) },	/* TP-Link LTE Module */
 	{ USB_DEVICE(TPLINK_VENDOR_ID, TPLINK_PRODUCT_MA180),
 	  .driver_info = (kernel_ulong_t)&net_intf4_blacklist },
 	{ USB_DEVICE(TPLINK_VENDOR_ID, 0x9000),					/* TP-Link MA260 */
@@ -2091,6 +2126,11 @@ static const struct usb_device_id option_ids[] = {
 	{ USB_DEVICE_AND_INTERFACE_INFO(WETELECOM_VENDOR_ID, WETELECOM_PRODUCT_WMD200, 0xff, 0xff, 0xff) },
 	{ USB_DEVICE_AND_INTERFACE_INFO(WETELECOM_VENDOR_ID, WETELECOM_PRODUCT_6802, 0xff, 0xff, 0xff) },
 	{ USB_DEVICE_AND_INTERFACE_INFO(WETELECOM_VENDOR_ID, WETELECOM_PRODUCT_WMD300, 0xff, 0xff, 0xff) },
+	{ USB_DEVICE_AND_INTERFACE_INFO(0x03f0, 0x421d, 0xff, 0xff, 0xff) }, /* HP lt2523 (Novatel E371) */
+	{ USB_DEVICE(FIBOCOM_VENDOR_ID, FIBOCOM_PRODUCT_NL678), /* Fibocom NL678 QMI */
+	  .driver_info = (kernel_ulong_t)&fibocom_nl678_blacklist },
+	{ USB_DEVICE(FIBOCOM_VENDOR_ID, FIBOCOM_PRODUCT_NL678_ECM), /* Fibocom NL678 ECM */
+	  .driver_info = (kernel_ulong_t)&fibocom_nl678_ecm_blacklist },
 	{ } /* Terminating entry */
 };
 MODULE_DEVICE_TABLE(usb, option_ids);

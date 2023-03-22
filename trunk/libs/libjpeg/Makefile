@@ -1,7 +1,8 @@
-SRC_NAME=jpeg-9c
-SRC_URL=http://www.ijg.org/files/jpegsrc.v9c.tar.gz
+SRC_NAME=jpeg-9e
+SRC_URL=http://www.ijg.org/files/jpegsrc.v9e.tar.gz
 
-all: download_test extract_test config_test
+#all: download_test extract_test config_test
+all: config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 download_test:
@@ -24,7 +25,7 @@ config_test:
 configure:
 	( cd $(SRC_NAME) ; \
 	./configure \
-		--prefix=$(STAGEDIR) \
+		--prefix= \
 		--enable-static \
 		--disable-shared \
 		--host=$(HOST_TARGET) \
@@ -38,7 +39,7 @@ clean:
 	rm -f config_done
 
 install:
-	$(MAKE) -C $(SRC_NAME) install DESTDIR=""
+	$(MAKE) -C $(SRC_NAME) install DESTDIR=$(STAGEDIR)
 
 romfs:
 

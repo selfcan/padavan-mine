@@ -1093,6 +1093,11 @@ struct net_device {
 	unsigned char		if_port;	/* Selectable AUI, TP,..*/
 	unsigned char		dma;		/* DMA channel		*/
 
+	/* Note : dev->mtu is often read without holding a lock.
+	 * Writers usually hold RTNL.
+	 * It is recommended to use ACCESS_ONCE() to annotate the reads
+	 * and writes.
+	 */
 	unsigned int		mtu;	/* interface MTU value		*/
 	unsigned short		type;	/* interface hardware type	*/
 	unsigned short		hard_header_len;	/* hardware hdr length	*/
@@ -1249,7 +1254,7 @@ struct net_device {
 	void (*destructor)(struct net_device *dev);
 
 #ifdef CONFIG_NETPOLL
-	struct netpoll_info	*npinfo;
+	struct netpoll_info __rcu	*npinfo;
 #endif
 
 #ifdef CONFIG_NET_NS
@@ -1378,6 +1383,9 @@ static inline void netdev_for_each_tx_queue(struct net_device *dev,
 		f(dev, &dev->_tx[i], arg);
 }
 
+extern struct netdev_queue *netdev_pick_tx(struct net_device *dev,
+					   struct sk_buff *skb);
+
 /*
  * Net namespace inlines
  */
@@ -1489,8 +1497,6 @@ struct napi_gro_cb {
 
 	/* used in skb_gro_receive() slow path */
 	struct sk_buff *last;
-#define NAPI_GRO_FREE		  1
-#define NAPI_GRO_FREE_STOLEN_HEAD 2
 };
 
 #define NAPI_GRO_CB(skb) ((struct napi_gro_cb *)(skb)->cb)
@@ -1654,9 +1660,6 @@ extern struct net_device	*dev_get_by_index(struct net *net, int ifindex);
 extern struct net_device	*__dev_get_by_index(struct net *net, int ifindex);
 extern struct net_device	*dev_get_by_index_rcu(struct net *net, int ifindex);
 extern int		dev_restart(struct net_device *dev);
-#ifdef CONFIG_NETPOLL_TRAP
-extern int		netpoll_trap(void);
-#endif
 extern int	       skb_gro_receive(struct sk_buff **head,
 				       struct sk_buff *skb);
 
@@ -1842,12 +1845,6 @@ static inline void netif_tx_start_all_queues(struct net_device *dev)
 
 static inline void netif_tx_wake_queue(struct netdev_queue *dev_queue)
 {
-#ifdef CONFIG_NETPOLL_TRAP
-	if (netpoll_trap()) {
-		netif_tx_start_queue(dev_queue);
-		return;
-	}
-#endif
 	if (test_and_clear_bit(__QUEUE_STATE_DRV_XOFF, &dev_queue->state))
 		__netif_schedule(dev_queue->qdisc);
 }
@@ -2045,10 +2042,6 @@ static inline void netif_start_subqueue(struct net_device *dev, u16 queue_index)
 static inline void netif_stop_subqueue(struct net_device *dev, u16 queue_index)
 {
 	struct netdev_queue *txq = netdev_get_tx_queue(dev, queue_index);
-#ifdef CONFIG_NETPOLL_TRAP
-	if (netpoll_trap())
-		return;
-#endif
 	netif_tx_stop_queue(txq);
 }
 
@@ -2083,10 +2076,6 @@ static inline bool netif_subqueue_stopped(const struct net_device *dev,
 static inline void netif_wake_subqueue(struct net_device *dev, u16 queue_index)
 {
 	struct netdev_queue *txq = netdev_get_tx_queue(dev, queue_index);
-#ifdef CONFIG_NETPOLL_TRAP
-	if (netpoll_trap())
-		return;
-#endif
 	if (test_and_clear_bit(__QUEUE_STATE_DRV_XOFF, &txq->state))
 		__netif_schedule(txq->qdisc);
 }
@@ -2456,6 +2445,11 @@ static inline void netif_tx_unlock_bh(struct net_device *dev)
 		__netif_tx_lock(txq, cpu);		\
 	}						\
 }
+
+#define HARD_TX_TRYLOCK(dev, txq)			\
+	(((dev->features & NETIF_F_LLTX) == 0) ?	\
+		__netif_tx_trylock(txq) :		\
+		true )
 
 #define HARD_TX_UNLOCK(dev, txq) {			\
 	if ((dev->features & NETIF_F_LLTX) == 0) {	\

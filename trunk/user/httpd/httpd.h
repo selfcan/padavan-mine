@@ -33,7 +33,10 @@
 #define STORAGE_DNSMASQ_DIR	"/etc/storage/dnsmasq"
 #define STORAGE_SCRIPTS_DIR	"/etc/storage"
 #define STORAGE_CRONTAB_DIR	"/etc/storage/cron/crontabs"
-#define STORAGE_KOOLPROXYT_DIR	"/etc/storage/koolproxy"
+#define STORAGE_TORCONF_DIR	"/etc/storage/tor"
+#define STORAGE_PRIVOXY_DIR	"/etc/storage/privoxy"
+ 
+
 #define PROFILE_FIFO_UPLOAD	"/tmp/settings_u.prf"
 #define PROFILE_FIFO_DOWNLOAD	"/tmp/settings_d.prf"
 #define STORAGE_FIFO_FILENAME	"/tmp/storage.tar.bz2"
@@ -141,7 +144,7 @@ extern int ej_set_share_mode(int eid, webs_t wp, int argc, char **argv);
 extern int f_exists(const char *path);
 extern int f_wait_exists(const char *name, int max);
 extern int do_f(const char *path, webs_t wp);
-extern void char_to_ascii(char *output, uint8_t *input);
+extern void char_to_ascii(char *output, char *input);
 
 // cgi.c
 extern void set_cgi(char *name, char *value);

@@ -1,9 +1,7 @@
 SRC_NAME=libusb-0.1.12
 
-CFLAGS += -Wno-format-truncation
-
-all:	config_test
-	$(MAKE) -C $(SRC_NAME)
+all: config_test
+	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
 
 config_test:
 	( if [ -f ./config_done ]; then \
@@ -15,7 +13,7 @@ config_test:
 configure:
 	( cd $(SRC_NAME) ; \
 	./configure \
-		--prefix=$(STAGEDIR) \
+		--prefix= \
 		--enable-static \
 		--disable-shared \
 		--disable-build-docs \
@@ -31,7 +29,7 @@ clean:
 	rm -f config_done
 
 install:
-	$(MAKE) -C $(SRC_NAME) install DESTDIR=""
+	$(MAKE) -C $(SRC_NAME) install DESTDIR=$(STAGEDIR)
 
 romfs:
 

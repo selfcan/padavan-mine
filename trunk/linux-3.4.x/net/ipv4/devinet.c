@@ -460,7 +460,7 @@ static int __inet_insert_ifa(struct in_ifaddr *ifa, struct nlmsghdr *nlh,
 	}
 
 	if (!(ifa->ifa_flags & IFA_F_SECONDARY)) {
-		net_srandom(ifa->ifa_local);
+		prandom_seed((__force u32) ifa->ifa_local);
 		ifap = last_primary;
 	}
 
@@ -1124,11 +1124,6 @@ static void inetdev_changename(struct net_device *dev, struct in_device *in_dev)
 skip:
 		rtmsg_ifa(RTM_NEWADDR, ifa, NULL, 0);
 	}
-}
-
-static inline bool inetdev_valid_mtu(unsigned int mtu)
-{
-	return mtu >= 68;
 }
 
 static void inetdev_send_gratuitous_arp(struct net_device *dev,

@@ -9,14 +9,14 @@ INSTALLDIR = $(ROOTDIR)/romfs
 include $(SHDIR)/boards.mk
 include $(SHDIR)/cflags.mk
 
-CFLAGS += -s -I. -I$(SHDIR) -I$(SHDIR)/include
+CFLAGS += -ffunction-sections -fdata-sections -fvisibility=hidden -s -I. -I$(SHDIR) -I$(SHDIR)/include
 CFLAGS += -I$(USERDIR)/wireless_tools
 CFLAGS += -I$(ROOTDIR)/$(LINUXDIR)/include/ralink
 
 # Disable/Enable ugly httpd_check
 #CFLAGS += -DHTTPD_CHECK
 
-LDFLAGS += -L. -lm
+LDFLAGS += -Wl,--gc-sections -L. -lm
 LDFLAGS += -L$(USERDIR)/wireless_tools -liw
 LDFLAGS += -L$(SHDIR) -lshared
 ifeq ($(STORAGE_ENABLED),y)
@@ -143,7 +143,7 @@ ifeq ($(CONFIG_FIRMWARE_INCLUDE_OPENVPN),y)
 endif
 
 ifeq ($(STORAGE_ENABLED),y)
-ifeq ($(CONFIG_FIRMWARE_INCLUDE_SMBD),y)
+ifneq (,$(filter y,$(CONFIG_FIRMWARE_INCLUDE_SMBD) $(CONFIG_FIRMWARE_INCLUDE_SMBD36)))
 	cd $(INSTALLDIR)/sbin && ln -sf rc run_samba
 	cd $(INSTALLDIR)/sbin && ln -sf rc stop_samba
 	cd $(INSTALLDIR)/sbin && ln -sf rc run_ftpsamba
@@ -152,7 +152,7 @@ endif
 ifeq ($(CONFIG_FIRMWARE_INCLUDE_FTPD),y)
 	cd $(INSTALLDIR)/sbin && ln -sf rc run_ftp
 	cd $(INSTALLDIR)/sbin && ln -sf rc stop_ftp
-ifneq ($(CONFIG_FIRMWARE_INCLUDE_SMBD),y)
+ifeq (,$(filter y,$(CONFIG_FIRMWARE_INCLUDE_SMBD) $(CONFIG_FIRMWARE_INCLUDE_SMBD36)))
 	cd $(INSTALLDIR)/sbin && ln -sf rc run_ftpsamba
 	cd $(INSTALLDIR)/sbin && ln -sf rc stop_ftpsamba
 endif
